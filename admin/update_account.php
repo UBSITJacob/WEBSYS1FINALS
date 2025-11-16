@@ -1,70 +1,176 @@
 <?php
+// admin/update_account.php
 session_start();
+require_once "../includes/oop_functions.php";
+header('Content-Type: application/json; charset=utf-8');
 
-// Check if admin is logged in
+// Check login
 if (!isset($_SESSION['admin'])) {
-    echo json_encode(["status" => "error", "message" => "Unauthorized access."]);
+    echo json_encode(['status' => 'error', 'message' => 'Unauthorized.']);
     exit;
 }
 
-$conn = new mysqli("localhost", "root", "", "Evelio_AMS_db");
-if ($conn->connect_error) {
-    echo json_encode(["status" => "error", "message" => "Database connection failed."]);
+// session admin expected to be an array with 'id' etc.
+$adminSession = $_SESSION['admin'];
+$adminId = is_array($adminSession) ? intval($adminSession['id']) : intval($adminSession);
+if ($adminId <= 0) {
+    echo json_encode(['status' => 'error', 'message' => 'Invalid session.']);
     exit;
 }
 
-$admin = $_SESSION['admin'];
-$adminId = is_array($admin) ? $admin['id'] : $admin;
+// Get posted fields
+$newFullname = trim($_POST['new_fullname'] ?? '');
+$newUsername = trim($_POST['new_username'] ?? '');
+$newEmail    = trim($_POST['new_email'] ?? '');
+$oldPassword = trim($_POST['old_password'] ?? '');
+$newPassword = trim($_POST['new_password'] ?? '');
+$confirmPass = trim($_POST['confirm_password'] ?? '');
 
-$currentPassword = $_POST['currentPassword'] ?? '';
-$newUsername     = trim($_POST['newUsername'] ?? '');
-$newPassword     = $_POST['newPassword'] ?? '';
-$confirmPassword = $_POST['confirmPassword'] ?? '';
+// Basic validation
+if ($oldPassword === '') {
+    echo json_encode(['status' => 'error', 'message' => 'Current password is required.']);
+    exit;
+}
 
-// Fetch current admin info
-$stmt = $conn->prepare("SELECT * FROM admin WHERE id = ?");
+// Connect DB
+$db = new Database();
+$conn = $db->getConnection();
+
+// Fetch current user record from users table
+$stmt = $conn->prepare("SELECT * FROM users WHERE id = ? LIMIT 1");
 $stmt->bind_param("i", $adminId);
 $stmt->execute();
-$result = $stmt->get_result();
-$user = $result->fetch_assoc();
+$res = $stmt->get_result();
+$current = $res->fetch_assoc();
 $stmt->close();
 
-if (!$user) {
-    echo json_encode(["status" => "error", "message" => "Admin not found."]);
+if (!$current) {
+    echo json_encode(['status' => 'error', 'message' => 'User record not found.']);
     exit;
 }
 
-// Simple password verification (no hashing)
-if ($currentPassword !== $user['password']) {
-    echo json_encode(["status" => "error", "message" => "Incorrect current password."]);
+// Ensure this user is an Admin
+if (!isset($current['user_type']) || strtolower($current['user_type']) !== 'admin') {
+    echo json_encode(['status' => 'error', 'message' => 'Unauthorized: not an admin account.']);
     exit;
 }
 
-// Validate new password
-if (!empty($newPassword) || !empty($confirmPassword)) {
-    if ($newPassword !== $confirmPassword) {
-        echo json_encode(["status" => "error", "message" => "New passwords do not match."]);
+// Verify current password (plain text comparison as requested)
+if ($current['password'] !== $oldPassword) {
+    echo json_encode(['status' => 'error', 'message' => 'Incorrect current password.']);
+    exit;
+}
+
+// Validate new email if provided
+if ($newEmail !== '' && !filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
+    echo json_encode(['status' => 'error', 'message' => 'Invalid email format.']);
+    exit;
+}
+
+// Validate new password if provided
+if ($newPassword !== '') {
+    if (strlen($newPassword) < 8) {
+        echo json_encode(['status' => 'error', 'message' => 'Password must be at least 8 characters long.']);
         exit;
     }
-} else {
-    $newPassword = $user['password']; // keep old
+    if ($newPassword !== $confirmPass) {
+        echo json_encode(['status' => 'error', 'message' => 'New passwords do not match.']);
+        exit;
+    }
 }
 
-if (empty($newUsername)) {
-    $newUsername = $user['username'];
+// Check username uniqueness (if changed)
+if ($newUsername !== '' && $newUsername !== $current['username']) {
+    $chk = $conn->prepare("SELECT id FROM users WHERE username = ? AND id != ? LIMIT 1");
+    $chk->bind_param("si", $newUsername, $adminId);
+    $chk->execute();
+    $chk->store_result();
+    if ($chk->num_rows > 0) {
+        echo json_encode(['status' => 'error', 'message' => 'Username already taken.']);
+        $chk->close();
+        exit;
+    }
+    $chk->close();
 }
 
-// Update account
-$updateStmt = $conn->prepare("UPDATE admin SET username = ?, password = ? WHERE id = ?");
-$updateStmt->bind_param("ssi", $newUsername, $newPassword, $adminId);
+// Check email uniqueness if needed (optional) - only if email changed and not empty
+if ($newEmail !== '' && $newEmail !== $current['email']) {
+    $chk = $conn->prepare("SELECT id FROM users WHERE email = ? AND id != ? LIMIT 1");
+    $chk->bind_param("si", $newEmail, $adminId);
+    $chk->execute();
+    $chk->store_result();
+    if ($chk->num_rows > 0) {
+        echo json_encode(['status' => 'error', 'message' => 'Email already in use.']);
+        $chk->close();
+        exit;
+    }
+    $chk->close();
+}
 
-if ($updateStmt->execute()) {
-    $_SESSION['admin']['username'] = $newUsername;
-    echo json_encode(["status" => "success", "message" => "Account updated successfully!"]);
+// Build update dynamically
+$updates = [];
+$params = [];
+$types = '';
+
+if ($newUsername !== '' && $newUsername !== $current['username']) {
+    $updates[] = "username = ?";
+    $params[] = $newUsername;
+    $types .= 's';
+}
+
+if ($newFullname !== '' && $newFullname !== $current['fullname']) {
+    $updates[] = "fullname = ?";
+    $params[] = $newFullname;
+    $types .= 's';
+}
+
+if ($newEmail !== '' && $newEmail !== $current['email']) {
+    $updates[] = "email = ?";
+    $params[] = $newEmail;
+    $types .= 's';
+}
+
+if ($newPassword !== '') {
+    $updates[] = "password = ?";
+    $params[] = $newPassword; // plain text - per instruction
+    $types .= 's';
+}
+
+if (empty($updates)) {
+    echo json_encode(['status' => 'error', 'message' => 'No changes detected.']);
+    exit;
+}
+
+// append id
+$params[] = $adminId;
+$types .= 'i';
+
+$sql = "UPDATE users SET " . implode(", ", $updates) . " WHERE id = ?";
+$updateStmt = $conn->prepare($sql);
+if ($updateStmt === false) {
+    echo json_encode(['status' => 'error', 'message' => 'Prepare failed: ' . $conn->error]);
+    exit;
+}
+
+// bind params dynamically
+$bind_names[] = $types;
+for ($i = 0; $i < count($params); $i++) {
+    $bind_names[] = &$params[$i];
+}
+call_user_func_array([$updateStmt, 'bind_param'], $bind_names);
+
+$exec = $updateStmt->execute();
+if ($exec) {
+    // Refresh session values
+    if ($newUsername !== '') $_SESSION['admin']['username'] = $newUsername;
+    if ($newFullname !== '') $_SESSION['admin']['fullname'] = $newFullname;
+    if ($newEmail    !== '') $_SESSION['admin']['email']    = $newEmail;
+    if ($newPassword !== '') $_SESSION['admin']['password'] = $newPassword;
+
+    echo json_encode(['status' => 'success', 'message' => 'Account updated successfully!']);
 } else {
-    echo json_encode(["status" => "error", "message" => "Failed to update account."]);
+    echo json_encode(['status' => 'error', 'message' => 'Update failed: ' . $updateStmt->error]);
 }
 
 $updateStmt->close();
 $conn->close();
-?>

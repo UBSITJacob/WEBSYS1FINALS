@@ -1,10 +1,25 @@
-<?php
+<?php 
 require_once "../includes/oop_functions.php";
 
 $db = new Database();
 $conn = $db->getConnection();
 
-$result = $conn->query("SELECT * FROM student_details ORDER BY user_id DESC");
+// JOIN student_details with users to get fullname + email
+$sql = "
+    SELECT 
+        sd.user_id AS id,
+        sd.school_id AS schoolId,
+        sd.gender,
+        sd.birthdate,
+        sd.status,
+        COALESCE(u.fullname, '') AS fullname,
+        COALESCE(u.email, '') AS email
+    FROM student_details sd
+    LEFT JOIN users u ON u.id = sd.user_id
+    ORDER BY sd.user_id DESC
+";
+
+$result = $conn->query($sql);
 ?>
 
 <h2>Manage Students</h2>
@@ -35,12 +50,12 @@ $result = $conn->query("SELECT * FROM student_details ORDER BY user_id DESC");
     <?php if ($result && $result->num_rows > 0): ?>
       <?php while ($row = $result->fetch_assoc()): ?>
         <tr id="studentRow_<?= (int)$row['id'] ?>" style="text-align:center;">
-          <td><?= htmlspecialchars($row['schoolId']) ?></td>
-          <td><?= htmlspecialchars($row['fullname']) ?></td>
-          <td><?= htmlspecialchars($row['gender']) ?></td>
-          <td><?= htmlspecialchars($row['birthdate']) ?></td>
-          <td><?= htmlspecialchars($row['email']) ?></td>
-          <td><?= htmlspecialchars($row['status']) ?></td>
+          <td><?= htmlspecialchars($row['schoolId'] ?? '') ?></td>
+          <td><?= htmlspecialchars($row['fullname'] ?? '') ?></td>
+          <td><?= htmlspecialchars($row['gender'] ?? '') ?></td>
+          <td><?= htmlspecialchars($row['birthdate'] ?? '') ?></td>
+          <td><?= htmlspecialchars($row['email'] ?? '') ?></td>
+          <td><?= htmlspecialchars($row['status'] ?? '') ?></td>
           <td>
             <button class="editBtn" data-id="<?= (int)$row['id'] ?>"
               style="background:#007bff;color:white;border:none;padding:5px 8px;border-radius:4px;cursor:pointer;">
@@ -73,7 +88,6 @@ $result = $conn->query("SELECT * FROM student_details ORDER BY user_id DESC");
       <input type="text" name="fullname" id="edit_fullname" required>
 
       <label>Email</label>
-      <!-- 🔧 FIX: removed readonly, so it can now be edited -->
       <input type="email" name="email" id="edit_email" required>
 
       <label>Gender</label>
@@ -89,10 +103,9 @@ $result = $conn->query("SELECT * FROM student_details ORDER BY user_id DESC");
       <label>Status</label>
       <select name="status" id="edit_status" required>
         <option value="Active">Active</option>
-        <option value="Inactive">Inactive</option>
-        <option value="Dropout">Dropout</option>
+        <option value="Alumni">Alumni</option>
         <option value="Transferred">Transferred</option>
-        <option value="Transferee">Transferee</option>
+        <option value="Dropped">Dropped</option>
       </select>
 
       <div style="margin-top:15px; display:flex; justify-content:space-between;">

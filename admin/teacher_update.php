@@ -1,8 +1,8 @@
 <?php
 require_once "../includes/oop_functions.php";
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
 
-$id = $_POST['id'] ?? '';
+$id = isset($_POST['id']) ? intval($_POST['id']) : 0;
 $facultyId = trim($_POST['facultyId'] ?? '');
 $fullname = trim($_POST['fullname'] ?? '');
 $username = trim($_POST['username'] ?? '');
@@ -10,7 +10,12 @@ $email = trim($_POST['email'] ?? '');
 $gender = trim($_POST['gender'] ?? '');
 $status = trim($_POST['status'] ?? '');
 
-if (!$id || !$facultyId || !$fullname || !$username || !$email || !$gender) {
+if ($id <= 0) {
+    echo json_encode(['status' => 'error', 'message' => 'Invalid teacher id.']);
+    exit;
+}
+
+if ($facultyId === '' || $fullname === '' || $username === '' || $email === '' || $gender === '') {
     echo json_encode(['status' => 'error', 'message' => 'All fields are required.']);
     exit;
 }
@@ -18,15 +23,39 @@ if (!$id || !$facultyId || !$fullname || !$username || !$email || !$gender) {
 $db = new Database();
 $conn = $db->getConnection();
 
-$stmt = $conn->prepare("UPDATE teacher SET facultyId=?, fullname=?, username=?, email=?, gender=?, status=? WHERE id=?");
-$stmt->bind_param("ssssssi", $facultyId, $fullname, $username, $email, $gender, $status, $id);
+try {
+    $conn->begin_transaction();
 
-if ($stmt->execute()) {
+    // update users table
+    $uStmt = $conn->prepare("UPDATE users SET fullname = ?, username = ?, email = ? WHERE id = ?");
+    $uStmt->bind_param("sssi", $fullname, $username, $email, $id);
+    if (!$uStmt->execute()) {
+        $conn->rollback();
+        echo json_encode(['status' => 'error', 'message' => 'Failed to update user: ' . $uStmt->error]);
+        $uStmt->close();
+        $conn->close();
+        exit;
+    }
+    $uStmt->close();
+
+    // update teacher_details table
+    $tStmt = $conn->prepare("UPDATE teacher_details SET faculty_id = ?, gender = ?, status = ? WHERE user_id = ?");
+    $tStmt->bind_param("sssi", $facultyId, $gender, $status, $id);
+    if (!$tStmt->execute()) {
+        $conn->rollback();
+        echo json_encode(['status' => 'error', 'message' => 'Failed to update teacher details: ' . $tStmt->error]);
+        $tStmt->close();
+        $conn->close();
+        exit;
+    }
+    $tStmt->close();
+
+    $conn->commit();
     echo json_encode(['status' => 'success', 'message' => 'Teacher updated successfully!']);
-} else {
-    echo json_encode(['status' => 'error', 'message' => 'Update failed.']);
+} catch (Exception $e) {
+    $conn->rollback();
+    echo json_encode(['status' => 'error', 'message' => 'Server error: ' . $e->getMessage()]);
+} finally {
+    $conn->close();
 }
-
-$stmt->close();
-$conn->close();
 ?>

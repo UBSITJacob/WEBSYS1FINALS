@@ -1,51 +1,48 @@
 <?php
 require_once "../includes/oop_functions.php";
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(['status' => 'error', 'message' => 'Invalid request method.']);
+    echo json_encode(['status'=>'error','message'=>'Invalid request method.']);
     exit;
 }
 
 $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
 if ($id <= 0) {
-    echo json_encode(['status' => 'error', 'message' => 'Missing or invalid student ID.']);
+    echo json_encode(['status'=>'error','message'=>'Invalid student id.']);
     exit;
 }
 
-try {
-    $db = new Database();
-    $conn = $db->getConnection();
+$db = new Database();
+$conn = $db->getConnection();
 
-    // Verify record exists
-    $check = $conn->prepare("SELECT id FROM students WHERE id = ?");
+try {
+    // check user exists
+    $check = $conn->prepare("SELECT id FROM users WHERE id = ? LIMIT 1");
     $check->bind_param("i", $id);
     $check->execute();
     $check->store_result();
-
     if ($check->num_rows === 0) {
-        echo json_encode(['status' => 'error', 'message' => 'Student not found.']);
+        echo json_encode(['status'=>'error','message'=>'User not found.']);
         $check->close();
         $conn->close();
         exit;
     }
     $check->close();
 
-    // Reset password to default '1'
+    // reset password to default '1' (plain text)
     $newPassword = '1';
-    $update = $conn->prepare("UPDATE students SET password = ? WHERE id = ?");
-    $update->bind_param("si", $newPassword, $id);
+    $upd = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
+    $upd->bind_param("si", $newPassword, $id);
 
-    if ($update->execute()) {
-        echo json_encode(['status' => 'success', 'message' => 'Password reset to default (1).']);
+    if ($upd->execute()) {
+        echo json_encode(['status'=>'success','message'=>'Password reset to default (1).']);
     } else {
-        echo json_encode(['status' => 'error', 'message' => 'Database update failed.']);
+        echo json_encode(['status'=>'error','message'=>'Failed to reset password: '.$upd->error]);
     }
-
-    $update->close();
-    $conn->close();
-
+    $upd->close();
 } catch (Exception $e) {
-    echo json_encode(['status' => 'error', 'message' => 'Server error: ' . $e->getMessage()]);
+    echo json_encode(['status'=>'error','message'=>'Server error: '.$e->getMessage()]);
+} finally {
+    $conn->close();
 }
-?>

@@ -1,4 +1,5 @@
 <?php
+// admin/dashboard.php
 session_start();
 require_once "../includes/oop_functions.php";
 
@@ -22,83 +23,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['logout'])) {
     exit;
 }
 
-// ---- Handle Update Account Form ----
-$success = "";
-$error = "";
-
-if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update_account"])) {
-    $newUsername = trim($_POST["new_username"]);
-    $newFullname = trim($_POST["new_fullname"]);
-    $oldPassword = trim($_POST["old_password"]);
-    $newPassword = trim($_POST["new_password"]);
-    $confirmPassword = trim($_POST["confirm_password"]);
-    $id = $admin['id'];
-
-    $stmt = $conn->prepare("SELECT * FROM admin WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $current = $stmt->get_result()->fetch_assoc();
-
-    if (!$current) {
-        $error = "Account not found.";
-    } else {
-        if ($current['password'] !== $oldPassword) {
-            $error = "Incorrect current password.";
-        } else {
-            $updates = [];
-            $params = [];
-            $types = "";
-
-            if (!empty($newUsername) && $newUsername !== $current['username']) {
-                $updates[] = "username = ?";
-                $params[] = $newUsername;
-                $types .= "s";
-            }
-
-            if (!empty($newFullname) && $newFullname !== $current['fullname']) {
-                $updates[] = "fullname = ?";
-                $params[] = $newFullname;
-                $types .= "s";
-            }
-
-            if (!empty($newPassword)) {
-                if (strlen($newPassword) < 8) {
-                    $error = "Password must be at least 8 characters long.";
-                } elseif ($newPassword !== $confirmPassword) {
-                    $error = "New passwords do not match.";
-                } else {
-                    $updates[] = "password = ?";
-                    $params[] = $newPassword;
-                    $types .= "s";
-                }
-            }
-
-            if (empty($error) && !empty($updates)) {
-                $sql = "UPDATE admin SET " . implode(", ", $updates) . " WHERE id = ?";
-                $params[] = $id;
-                $types .= "i";
-                $update = $conn->prepare($sql);
-                $update->bind_param($types, ...$params);
-
-                if ($update->execute()) {
-                    $_SESSION['admin']['username'] = $newUsername ?: $current['username'];
-                    $_SESSION['admin']['fullname'] = $newFullname ?: $current['fullname'];
-                    $_SESSION['admin']['password'] = $newPassword ?: $current['password'];
-                    $success = "Account updated successfully!";
-                } else {
-                    $error = "Update failed. Try again.";
-                }
-            } elseif (empty($error) && empty($updates)) {
-                $error = "No changes detected.";
-            }
-        }
-    }
+// ---- Dashboard Counts ----
+// student_details table
+$totalStudents = 0;
+$res = $conn->query("SELECT COUNT(*) AS total FROM student_details");
+if ($res) {
+    $totalStudents = intval($res->fetch_assoc()['total'] ?? 0);
 }
 
-// ---- Dashboard Counts ----
-$totalStudents = $conn->query("SELECT COUNT(*) AS total FROM student_details")->fetch_assoc()['total'] ?? 0;
-$totalTeachers = $conn->query("SELECT COUNT(*) AS total FROM teacher_details")->fetch_assoc()['total'] ?? 0;
-$totalAdmins   = $conn->query("SELECT COUNT(*) AS total FROM users")->fetch_assoc()['total'] ?? 0;
+// teacher_details table
+$totalTeachers = 0;
+$res = $conn->query("SELECT COUNT(*) AS total FROM teacher_details");
+if ($res) {
+    $totalTeachers = intval($res->fetch_assoc()['total'] ?? 0);
+}
+
+// users table -> count admin users
+$totalAdmins = 0;
+$res = $conn->prepare("SELECT COUNT(*) AS total FROM users WHERE user_type = 'Admin'");
+$res->execute();
+$r = $res->get_result();
+if ($r) $totalAdmins = intval($r->fetch_assoc()['total'] ?? 0);
+$res->close();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -108,6 +54,7 @@ $totalAdmins   = $conn->query("SELECT COUNT(*) AS total FROM users")->fetch_asso
 <link rel="stylesheet" href="css/admin_styles.css">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <style>
+/* (same styles as your latest dashboard — kept concise here) */
 body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #f4f4f4; }
 .sidebar { background-color: #1a1a1a; color: white; width: 230px; height: 100vh; position: fixed; top: 0; left: 0; padding: 20px; transition: transform 0.3s ease; }
 .sidebar.hidden { transform: translateX(-230px); }
@@ -132,21 +79,12 @@ body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #f4f4f4
 .header button:hover { background: #0056b3; }
 .logout-btn { background-color: #dc3545 !important; }
 .logout-btn:hover { background-color: #c82333 !important; }
-.main-content { margin-left: 230px; padding: 25px; transition: margin-left 0.3s ease; }
+.main-content { margin-left: 230px; padding: 25px; transition: margin-left 0.3s ease; min-height: calc(100vh - 60px); }
 .main-content.sidebar-hidden { margin-left: 0; }
 .dashboard-cards { display: flex; gap: 20px; margin-top: 20px; flex-wrap: wrap; }
 .card { flex: 1; background: #fff; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 3px 10px rgba(0,0,0,0.1); min-width: 250px; }
 .card h3 { color: #333; }
 .card .count { font-size: 2rem; font-weight: bold; margin-top: 10px; color: #007bff; }
-.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
-.modal-content { background-color: white; margin: 8% auto; padding: 20px; width: 350px; border-radius: 10px; text-align: center; position: relative; }
-.modal-content h3 { margin-bottom: 15px; }
-.modal-content label { display: block; text-align: left; font-weight: 600; margin: 5px 0 3px 20px; color: #333; }
-.modal-content input { width: 90%; padding: 8px; margin: 3px 0 10px; border: 1px solid #ccc; border-radius: 5px; }
-.modal-content button { background-color: #007bff; color: white; padding: 8px 12px; border: none; border-radius: 5px; cursor: pointer; }
-.modal-content button:hover { background-color: #0056b3; }
-.close-btn { color: #aaa; position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; }
-.close-btn:hover { color: black; }
 </style>
 </head>
 <body>
@@ -155,8 +93,11 @@ body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #f4f4f4
     <div class="profile-section">
         <img src="<?= htmlspecialchars($admin['profile_pic'] ?? 'img/default.jpg'); ?>" alt="Profile Picture">
         <p><?= htmlspecialchars($admin['fullname'] ?? 'Administrator'); ?></p>
+
+        <!-- Settings button loads settings.php dynamically -->
         <button class="update-password-btn" id="openSettings">Settings</button>
     </div>
+
     <ul>
         <li><a class="nav-link active" data-page="dashboard">Dashboard</a></li>
 
@@ -168,7 +109,6 @@ body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #f4f4f4
             </div>
         </li>
 
-        <!-- ✅ NEW MANAGE TEACHERS DROPDOWN -->
         <li class="dropdown">
             <a class="dropdown-toggle">Manage Teachers ▼</a>
             <div class="dropdown-content">
@@ -177,7 +117,9 @@ body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #f4f4f4
             </div>
         </li>
 
-        <li><a class="nav-link" data-page="manage_roles.php">Manage Roles</a></li>
+        <li>
+            <a class="nav-link" data-page="manage_roles.php">Manage Roles</a>
+        </li>
     </ul>
 </div>
 
@@ -198,24 +140,6 @@ body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #f4f4f4
         <div class="card"><h3>Total Students</h3><div class="count"><?= $totalStudents ?></div></div>
         <div class="card"><h3>Total Teachers</h3><div class="count"><?= $totalTeachers ?></div></div>
         <div class="card"><h3>Total Admin Staff</h3><div class="count"><?= $totalAdmins ?></div></div>
-    </div>
-</div>
-
-<!-- Settings Modal -->
-<div id="settingsModal" class="modal">
-    <div class="modal-content">
-        <span class="close-btn" id="closeModal">&times;</span>
-        <h3>Account Settings</h3>
-        <form id="settingsForm">
-            <label for="new_fullname">Full Name</label>
-            <input type="text" id="new_fullname" name="new_fullname" value="<?= htmlspecialchars($admin['fullname']); ?>">
-            <label for="new_username">Username</label>
-            <input type="text" id="new_username" name="new_username" value="<?= htmlspecialchars($admin['username']); ?>">
-            <input type="password" name="old_password" placeholder="Current Password" required>
-            <input type="password" name="new_password" placeholder="New Password (min 8 characters)">
-            <input type="password" name="confirm_password" placeholder="Confirm New Password">
-            <button type="submit" name="update_account">Save Changes</button>
-        </form>
     </div>
 </div>
 
@@ -241,23 +165,25 @@ fullscreenBtn.onclick = () => {
     }
 };
 
-// --- Dropdown menus ---
+// Dropdown menus
 document.querySelectorAll('.dropdown-toggle').forEach(el =>
     el.addEventListener('click', () => el.parentElement.classList.toggle('open'))
 );
 
-// ✅ Dynamic page loading + persistence + highlight active link
+// ACTIVE LINK SETTER
 function setActiveLink(page) {
     document.querySelectorAll('.nav-link').forEach(a => {
         a.classList.remove('active');
         if (a.dataset.page === page) {
             a.classList.add('active');
+
             const parentDropdown = a.closest('.dropdown');
             if (parentDropdown) parentDropdown.classList.add('open');
         }
     });
 }
 
+// PAGE LOADER
 function loadPage(page) {
     if (!page || page === 'dashboard') {
         localStorage.removeItem('currentPage');
@@ -272,6 +198,7 @@ function loadPage(page) {
             localStorage.setItem('currentPage', page);
             setActiveLink(page);
 
+            // execute inline scripts from loaded page
             const temp = document.createElement('div');
             temp.innerHTML = html;
             temp.querySelectorAll('script').forEach(oldScript => {
@@ -281,17 +208,26 @@ function loadPage(page) {
                 document.body.appendChild(newScript);
             });
         })
-        .catch(err => Swal.fire('Error', 'Unable to load page: ' + err.message, 'error'));
+        .catch(err =>
+            Swal.fire('Error', 'Unable to load page: ' + err.message, 'error')
+        );
 }
 
+// NAV LINKS
 document.querySelectorAll('.nav-link').forEach(link => {
     link.addEventListener('click', e => {
         e.preventDefault();
-        const page = link.dataset.page;
-        loadPage(page);
+        loadPage(link.dataset.page);
     });
 });
 
+// SETTINGS BUTTON (TOP OF SIDEBAR)
+document.getElementById('openSettings').addEventListener('click', e => {
+    e.preventDefault();
+    loadPage("settings.php");
+});
+
+// RESTORE LAST PAGE
 window.addEventListener('DOMContentLoaded', () => {
     const lastPage = localStorage.getItem('currentPage');
     if (lastPage) {
@@ -300,70 +236,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// ✅ Account settings modal
-const settingsForm = document.getElementById('settingsForm');
-const modal = document.getElementById('settingsModal');
-
-if (settingsForm) {
-    let originalData = {};
-    document.getElementById('openSettings').onclick = () => {
-        modal.style.display = 'block';
-        originalData = {
-            fullname: document.getElementById('new_fullname').value.trim(),
-            username: document.getElementById('new_username').value.trim()
-        };
-    };
-
-    document.getElementById('closeModal').onclick = () => modal.style.display = 'none';
-    window.onclick = e => { if (e.target == modal) modal.style.display = 'none'; };
-
-    settingsForm.addEventListener('submit', e => {
-        e.preventDefault();
-        const newFullname = document.getElementById('new_fullname').value.trim();
-        const newUsername = document.getElementById('new_username').value.trim();
-        const oldPass = settingsForm.querySelector('[name="old_password"]').value.trim();
-        const newPass = settingsForm.querySelector('[name="new_password"]').value.trim();
-        const confirmPass = settingsForm.querySelector('[name="confirm_password"]').value.trim();
-
-        if (newPass && newPass.length < 8)
-            return Swal.fire('Error', 'New password must be at least 8 characters long.', 'error');
-
-        const hasChanges = (newFullname !== originalData.fullname) ||
-                           (newUsername !== originalData.username) ||
-                           (newPass.length > 0);
-
-        if (!hasChanges) return Swal.fire('Info', 'No changes detected.', 'info');
-        if (newPass && newPass !== confirmPass)
-            return Swal.fire('Error', 'New passwords do not match.', 'error');
-        if (newPass && !oldPass)
-            return Swal.fire('Error', 'Please enter your current password.', 'error');
-
-        const formData = new FormData(settingsForm);
-        formData.append('update_account', '1');
-
-        fetch('', { method: 'POST', body: formData })
-            .then(r => r.text())
-            .then(html => {
-                if (html.includes('Account updated successfully!')) {
-                    Swal.fire('Success', 'Account updated successfully!', 'success')
-                        .then(() => location.reload());
-                } else if (html.includes('Incorrect current password')) {
-                    Swal.fire('Error', 'Incorrect current password.', 'error');
-                } else if (html.includes('Password must be at least 8 characters long')) {
-                    Swal.fire('Error', 'Password must be at least 8 characters long.', 'error');
-                } else if (html.includes('New passwords do not match')) {
-                    Swal.fire('Error', 'New passwords do not match.', 'error');
-                } else if (html.includes('No changes detected')) {
-                    Swal.fire('Info', 'No changes detected.', 'info');
-                } else {
-                    Swal.fire('Error', 'Update failed. Try again.', 'error');
-                }
-            })
-            .catch(() => Swal.fire('Error', 'Unable to update account.', 'error'));
-    });
-}
-
-// ✅ Clear saved page when signing out
+// CLEAR LAST PAGE WHEN LOGGING OUT
 document.getElementById('logoutForm').addEventListener('submit', () => {
     localStorage.removeItem('currentPage');
 });

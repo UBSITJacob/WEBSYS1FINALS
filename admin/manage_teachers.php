@@ -4,12 +4,27 @@ require_once "../includes/oop_functions.php";
 $db = new Database();
 $conn = $db->getConnection();
 
-$result = $conn->query("SELECT * FROM teacher_details ORDER BY user_id DESC");
+// JOIN users + teacher_details, alias fields to match frontend expectations
+$sql = "
+    SELECT 
+        td.user_id AS id,
+        td.faculty_id AS facultyId,
+        td.gender,
+        td.status,
+        COALESCE(u.fullname, '') AS fullname,
+        COALESCE(u.email, '') AS email,
+        COALESCE(u.username, '') AS username
+    FROM teacher_details td
+    LEFT JOIN users u ON u.id = td.user_id
+    ORDER BY td.user_id DESC
+";
+
+$result = $conn->query($sql);
 ?>
 
 <h2>Manage Teachers</h2>
 
-<!-- 🔍 Search bar -->
+<!-- Search bar -->
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
     <div style="position: relative; width: 100%; max-width: 420px;">
         <input type="text" id="searchInput" placeholder="Search by name, Faculty ID, username, or email..." autocomplete="off"
@@ -33,14 +48,14 @@ $result = $conn->query("SELECT * FROM teacher_details ORDER BY user_id DESC");
     </thead>
     <tbody id="teacherTbody">
         <?php if ($result && $result->num_rows > 0): ?>
-            <?php while($row = $result->fetch_assoc()): ?>
+            <?php while ($row = $result->fetch_assoc()): ?>
                 <tr id="teacherRow_<?= (int)$row['id'] ?>" style="text-align:center;">
-                    <td><?= htmlspecialchars($row['facultyId']) ?></td>
-                    <td><?= htmlspecialchars($row['fullname']) ?></td>
-                    <td><?= htmlspecialchars($row['gender']) ?></td>
-                    <td><?= htmlspecialchars($row['email']) ?></td>
-                    <td><?= htmlspecialchars($row['username']) ?></td>
-                    <td><?= htmlspecialchars($row['status']) ?></td>
+                    <td><?= htmlspecialchars($row['facultyId'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($row['fullname'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($row['gender'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($row['email'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($row['username'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($row['status'] ?? '') ?></td>
                     <td>
                         <button class="editBtn" data-id="<?= (int)$row['id'] ?>"
                             style="background:#007bff;color:white;border:none;padding:5px 8px;border-radius:4px;cursor:pointer;">
@@ -76,7 +91,7 @@ $result = $conn->query("SELECT * FROM teacher_details ORDER BY user_id DESC");
       <input type="text" name="username" id="edit_username" required>
 
       <label>Email</label>
-      <input type="text" name="email" id="edit_email" required style="background:#f1f1f1;">
+      <input type="email" name="email" id="edit_email" required>
 
       <label>Gender</label>
       <select name="gender" id="edit_gender" required>
@@ -89,6 +104,7 @@ $result = $conn->query("SELECT * FROM teacher_details ORDER BY user_id DESC");
       <select name="status" id="edit_status" required>
         <option value="Active">Active</option>
         <option value="Inactive">Inactive</option>
+        <option value="Leave">Leave</option>
       </select>
 
       <div style="margin-top:15px; display:flex; justify-content:space-between; align-items:center;">
@@ -112,12 +128,10 @@ function initManageTeachers() {
     const tbody = document.getElementById("teacherTbody");
     if (!input || !suggestionsBox || !tbody) return;
 
-    // Restore full table
     function restoreTable() {
         Array.from(tbody.querySelectorAll("tr")).forEach(row => row.style.display = "");
     }
 
-    // Show only teacher by Faculty ID (exact) or by name contains
     function showOnlyTeacherByFacultyId(facId) {
         const rows = Array.from(tbody.querySelectorAll("tr"));
         let found = false;
@@ -182,14 +196,11 @@ function initManageTeachers() {
                 suggestionsBox.style.display = "none";
                 showOnlyTeacherByFacultyId(item.FacultyID);
             });
-            div.addEventListener("mouseenter", () => div.style.background = "#f0f7ff");
-            div.addEventListener("mouseleave", () => div.style.background = "white");
             suggestionsBox.appendChild(div);
         });
         suggestionsBox.style.display = "block";
     }
 
-    // Input handler
     input.addEventListener("input", function() {
         const q = this.value.trim();
         if (q.length < 1) {
@@ -206,14 +217,13 @@ function initManageTeachers() {
             .catch(() => suggestionsBox.style.display = "none");
     });
 
-    // click outside closes suggestions
     document.addEventListener("click", (e) => {
         if (!e.target.closest("#searchInput") && !e.target.closest("#suggestions")) {
             suggestionsBox.style.display = "none";
         }
     });
 
-    // --- Edit / Delete / Reset flows ---
+    // Edit / Delete / Reset flows
     let originalFormData = null;
     const modal = document.getElementById("editTeacherModal");
 
@@ -221,7 +231,6 @@ function initManageTeachers() {
         const editBtn = e.target.closest(".editBtn");
         const deleteBtn = e.target.closest(".deleteBtn");
 
-        // EDIT
         if (editBtn) {
             const id = editBtn.dataset.id;
             if (!id) return;
@@ -235,7 +244,7 @@ function initManageTeachers() {
                     const t = data.teacher;
                     document.getElementById("edit_id").value = t.id;
                     document.getElementById("edit_facultyId").value = t.facultyId;
-                    document.getElementById("edit_fullname").value = t.fullname;
+                    document.getElementById("edit_fullname").value = t.fullname ?? '';
                     document.getElementById("edit_username").value = t.username ?? '';
                     document.getElementById("edit_email").value = t.email ?? '';
                     document.getElementById("edit_gender").value = t.gender ?? '';
@@ -246,7 +255,6 @@ function initManageTeachers() {
                 .catch(() => Swal.fire("Error", "Could not load teacher details.", "error"));
         }
 
-        // DELETE
         if (deleteBtn) {
             const id = deleteBtn.dataset.id;
             if (!id) return;
@@ -279,7 +287,7 @@ function initManageTeachers() {
         }
     });
 
-    // SAVE EDIT
+    // Save edit
     const editForm = document.getElementById("editTeacherForm");
     if (editForm) {
         editForm.addEventListener("submit", function(e) {
@@ -315,7 +323,7 @@ function initManageTeachers() {
         });
     }
 
-    // RESET PASSWORD
+    // Reset password
     const resetBtn = document.getElementById("resetPasswordBtn");
     if (resetBtn) {
         resetBtn.addEventListener("click", function() {

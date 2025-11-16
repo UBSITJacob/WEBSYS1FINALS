@@ -4,223 +4,178 @@ require_once "includes/oop_functions.php";
 
 $login = new Login();
 $message = "";
-$showForm = ""; // Track which form to show after error
 
+// HANDLE LOGIN REQUEST
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    if (isset($_POST['login_admin'])) {
-        $username = $_POST['username'];
-        $password = $_POST['password'];
-        $admin = $login->loginAdmin($username, $password);
-        if ($admin) {
-            $_SESSION['admin'] = $admin;
+
+    $email = trim($_POST['email']);
+    $password = trim($_POST['password']);
+
+    // Try login using universal function
+    $user = $login->loginUser($email, $password);
+
+    if ($user) {
+        // Save correct session
+        if ($user['user_type'] == "Admin") {
+            $_SESSION['admin'] = $user;
             header("Location: admin/dashboard.php");
             exit;
-        } else {
-            $message = "Invalid Admin Credentials!";
-            $showForm = "admin";
         }
-    }
-
-    if (isset($_POST['login_teacher'])) {
-        $username = $_POST['username'];
-        $password = $_POST['password'];
-        $teacher = $login->loginTeacher($username, $password);
-        if ($teacher) {
-            $_SESSION['teacher'] = $teacher;
+        if ($user['user_type'] == "Teacher") {
+            $_SESSION['teacher'] = $user;
             header("Location: teacher/dashboard.php");
             exit;
-        } else {
-            $message = "Invalid Teacher Credentials!";
-            $showForm = "teacher";
+        }
+        if ($user['user_type'] == "Student") {
+            $_SESSION['student'] = $user;
+            header("Location: student/dashboard.php");
+            exit;
         }
     }
 
-    if (isset($_POST['login_student'])) {
-        $schoolID = $_POST['school_id'];
-        $birthdate = $_POST['birthdate'];
-        $password = $_POST['password'];
-        $student = $login->loginStudent($schoolID, $birthdate, $password);
-        if ($student) {
-            $_SESSION['student'] = $student;
-            header("Location: student/dashboard.php");
-            exit;
-        } else {
-            $message = "Invalid Student Credentials!";
-            $showForm = "student";
-        }
-    }
+    // Login failed
+    $message = "Invalid Email or Password!";
 }
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Evelio AMS Portal | Login</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<title>Evelio AMS Portal | Login</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-   <style>
-    * { box-sizing: border-box; font-family: "Segoe UI", Arial, sans-serif; }
+<style>
+* { box-sizing: border-box; font-family: "Segoe UI", Arial, sans-serif; }
 
-    body {
-        background-color: #f0f4f8;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        margin: 0;
-    }
+body {
+    background-color: #f0f4f8;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
 
-    .login-box {
-        background-color: #fff;
-        padding: 35px 40px;
-        border-radius: 12px;
-        width: 380px;
-        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1);
-        text-align: center;
-    }
+.login-box {
+    background-color: #fff;
+    padding: 35px 40px;
+    border-radius: 12px;
+    width: 380px;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
 
-    .login-box img {
-        width: 90px;
-        height: 90px;
-        border-radius: 50%;
-        margin-bottom: 15px;
-    }
+.login-box img {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    margin-bottom: 15px;
+}
 
-    .login-box h2 {
-        font-size: 1.3rem;
-        color: #0d47a1;
-        margin-bottom: 25px;
-    }
+.login-box h2 {
+    font-size: 1.3rem;
+    color: #0d47a1;
+    margin-bottom: 25px;
+}
 
-    /* Selection buttons */
-    .btn-option {
-        width: 100%;
-        margin: 6px 0;
-        padding: 10px;
-        border: none;
-        background-color: #1976d2;
-        color: white;
-        border-radius: 6px;
-        cursor: pointer;
-        font-weight: 600;
-        font-size: 0.95rem;
-        transition: background-color 0.2s, transform 0.1s;
-    }
+input[type="email"],
+input[type="password"] {
+    width: 100%;
+    padding: 10px;
+    margin: 6px 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
 
-    .btn-option:hover { background-color: #1565c0; transform: scale(1.02); }
+input[type="submit"] {
+    width: 100%;
+    padding: 10px;
+    background-color: #1565c0;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+}
 
-    .btn-register {
-        background-color: #2e7d32;
-        color: white;
-    }
+input[type="submit"]:hover {
+    background-color: #0d47a1;
+}
 
-    .btn-register:hover { background-color: #1b5e20; }
+.message {
+    background: #ffebee;
+    color: #b71c1c;
+    padding: 8px;
+    border-radius: 5px;
+    margin-bottom: 12px;
+    border: 1px solid #ef9a9a;
+}
 
-    form {
-        display: none;
-        margin-top: 15px;
-    }
+.btn-register {
+    margin-top: 10px;
+    background-color: #2e7d32;
+    color: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+    font-weight: 600;
+}
+.btn-register:hover {
+    background-color: #1b5e20;
+}
 
-    input[type="text"],
-    input[type="password"],
-    input[type="date"] {
-        width: 100%;
-        padding: 8px;
-        margin: 6px 0;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        font-size: 0.95rem;
-    }
+/* MODAL */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    justify-content: center;
+    align-items: center;
+}
 
-    input[type="submit"] {
-        width: 100%;
-        padding: 10px;
-        background-color: #1565c0;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-weight: 600;
-        transition: background-color 0.2s, transform 0.1s;
-    }
+.modal-content {
+    background: white;
+    padding: 25px;
+    width: 90%;
+    max-width: 550px;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
+}
 
-    input[type="submit"]:hover { background-color: #0d47a1; transform: scale(1.02); }
+.modal h3 {
+    text-align: center;
+    color: #0d47a1;
+    font-size: 1.4rem;
+}
 
-    .back-btn {
-        background-color: #9e9e9e;
-        color: white;
-        border: none;
-        padding: 8px 12px;
-        border-radius: 5px;
-        margin-top: 10px;
-        cursor: pointer;
-        width: 100%;
-        font-weight: 600;
-    }
+.modal p {
+    text-align: justify;
+    font-size: 1rem;
+    margin: 20px 0;
+}
 
-    .back-btn:hover { background-color: #757575; }
+.modal button {
+    padding: 10px 30px;
+    margin: 10px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1rem;
+}
 
-    .message {
-        background: #ffebee;
-        color: #b71c1c;
-        padding: 8px;
-        border: 1px solid #ef9a9a;
-        border-radius: 4px;
-        margin-bottom: 10px;
-        font-size: 0.9rem;
-    }
+.agree { background-color: #2e7d32; color: #fff; }
+.agree:hover { background-color: #1b5e20; }
 
-    /* Modal styling */
-    .modal {
-        display: none;
-        position: fixed;
-        z-index: 1000;
-        left: 0; top: 0;
-        width: 100%; height: 100%;
-        background-color: rgba(0,0,0,0.5);
-        justify-content: center;
-        align-items: center;
-    }
-
-    .modal-content {
-        background: white;
-        padding: 25px;
-        width: 90%;
-        max-width: 500px;
-        border-radius: 10px;
-        text-align: justify;
-        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.15);
-    }
-
-    .modal h3 {
-        text-align: center;
-        color: #0d47a1;
-    }
-
-    .modal button {
-        padding: 8px 15px;
-        margin: 8px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-weight: 600;
-    }
-
-    .agree {
-        background-color: #2e7d32;
-        color: #fff;
-    }
-
-    .agree:hover { background-color: #1b5e20; }
-
-    .disagree {
-        background-color: #c62828;
-        color: #fff;
-    }
-
-    .disagree:hover { background-color: #b71c1c; }
+.disagree { background-color: #c62828; color: #fff; }
+.disagree:hover { background-color: #b71c1c; }
 </style>
-
 </head>
 <body>
 
@@ -232,70 +187,34 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <div class="message"><?= htmlspecialchars($message) ?></div>
     <?php endif; ?>
 
-    <!-- User Selection -->
-    <div id="user-selection">
-        <label>Select User:</label>
-        <button class="btn-option" onclick="showForm('admin')">Admin</button>
-        <button class="btn-option" onclick="showForm('teacher')">Teacher</button>
-        <button class="btn-option" onclick="showForm('student')">Student</button>
-        <button class="btn-option btn-register" onclick="openConsent()">Apply as New Student / Register</button>
-    </div>
-
-    <!-- Admin Login -->
-    <form method="POST" id="admin">
-        <input type="text" name="username" placeholder="Username" required>
+    <!-- UNIFIED LOGIN FORM -->
+    <form method="POST">
+        <input type="email" name="email" placeholder="Email Address" required>
         <input type="password" name="password" placeholder="Password" required>
-        <input type="submit" name="login_admin" value="Login as Admin">
-        <button type="button" class="back-btn" onclick="goBack()">Back</button>
+        <input type="submit" value="Login">
     </form>
 
-    <!-- Teacher Login -->
-    <form method="POST" id="teacher">
-        <input type="text" name="username" placeholder="Username" required>
-        <input type="password" name="password" placeholder="Password" required>
-        <input type="submit" name="login_teacher" value="Login as Teacher">
-        <button type="button" class="back-btn" onclick="goBack()">Back</button>
-    </form>
-
-    <!-- Student Login -->
-    <form method="POST" id="student">
-        <input type="text" name="school_id" placeholder="School ID" required>
-        <input type="text" name="birthdate" placeholder="Birthdate (MM/DD/YYYY)" required>
-        <input type="password" name="password" placeholder="Password" required>
-        <input type="submit" name="login_student" value="Login as Student">
-        <button type="button" class="back-btn" onclick="goBack()">Back</button>
-    </form>
+    <!-- APPLY AS NEW STUDENT -->
+    <button class="btn-register" onclick="openConsent()">Apply as New Student / Register</button>
 </div>
 
-<!-- Consent Modal -->
+<!-- CONSENT MODAL -->
 <div class="modal" id="consentModal">
     <div class="modal-content">
         <h3>CONSENT AGREEMENT</h3>
+
         <p>
-            I have read and understood the Evelio Javier Memorial National High School Privacy Policy. 
+            I have read and understood the Evelio Javier Memorial National High School Privacy Policy.
             I hereby give my consent for the processing of my personal data by authorized personnel 
             for academic management purposes.
         </p>
-        <div style="text-align:center;">
-            <button class="agree" onclick="agreeConsent()">Agree</button>
-            <button class="disagree" onclick="closeConsent()">Disagree</button>
-        </div>
+
+        <button class="agree" onclick="agreeConsent()">Agree</button>
+        <button class="disagree" onclick="closeConsent()">Disagree</button>
     </div>
 </div>
 
 <script>
-function showForm(type) {
-    document.getElementById('user-selection').style.display = 'none';
-    document.querySelectorAll('form').forEach(f => f.style.display = 'none');
-    const selectedForm = document.getElementById(type);
-    if (selectedForm) selectedForm.style.display = 'block';
-}
-
-function goBack() {
-    document.querySelectorAll('form').forEach(f => f.style.display = 'none');
-    document.getElementById('user-selection').style.display = 'block';
-}
-
 function openConsent() {
     document.getElementById('consentModal').style.display = 'flex';
 }
@@ -307,13 +226,6 @@ function closeConsent() {
 function agreeConsent() {
     window.location.href = "register.php";
 }
-
-// Auto-show form on error
-<?php if (!empty($showForm)): ?>
-    document.addEventListener("DOMContentLoaded", () => {
-        showForm("<?= $showForm ?>");
-    });
-<?php endif; ?>
 </script>
 
 </body>

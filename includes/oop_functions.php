@@ -2,9 +2,9 @@
 class Database {
     private $host = "localhost";
     private $user = "root";
-    private $pass = ""; // Change if needed
+    private $pass = "";
     private $dbname = "evelio_db";
-    public $conn; // made public so it can be accessed directly
+    public $conn;
 
     public function __construct() {
         $this->connect();
@@ -12,12 +12,12 @@ class Database {
 
     private function connect() {
         $this->conn = new mysqli($this->host, $this->user, $this->pass, $this->dbname);
+
         if ($this->conn->connect_error) {
             die("Database Connection Failed: " . $this->conn->connect_error);
         }
     }
 
-    // ✅ Allow other scripts to use the same DB connection
     public function getConnection() {
         return $this->conn;
     }
@@ -25,102 +25,79 @@ class Database {
 
 class Login extends Database {
 
-    /* ----------- ADMIN LOGIN ----------- */
-    public function loginAdmin($username, $password) {
-        $sql = "SELECT * FROM users WHERE username = ? AND password = ? AND user_type = 'Admin' LIMIT 1";
+    /** --------------------------------------------------
+     * UNIVERSAL LOGIN SYSTEM (simple password check)
+     * -------------------------------------------------- */
+    public function loginUser($email, $password) {
+        $sql = "SELECT * FROM users WHERE email = ? LIMIT 1";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("ss", $username, $password);
+        $stmt->bind_param("s", $email);
         $stmt->execute();
-        $result = $stmt->get_result();
 
-        if ($result->num_rows === 1) {
-            $admin = $result->fetch_assoc();
-            if (empty($admin['profile_pic'])) {
-                $admin['profile_pic'] = 'img/default.jpg';
-            }
-            return $admin;
+        $result = $stmt->get_result();
+        if ($result->num_rows !== 1) {
+            return false; // No user found
         }
-        return false;
+
+        $user = $result->fetch_assoc();
+
+        // If you add hashing later → replace with password_verify()
+        if ($user['password'] === $password) {
+            return $user; // Successful login
+        }
+
+        return false; // Wrong password
     }
 
-    /* ----------- TEACHER LOGIN ----------- */
-    public function loginTeacher($username, $password) {
-        $sql = "SELECT * FROM users WHERE username = ? AND password = ? AND user_type = 'Teacher' LIMIT 1";
+    /** --------------------------------------------------
+     * CREATE USER (for admin panel or registration)
+     * -------------------------------------------------- */
+    public function createUser($username, $password, $email, $fullname, $user_type) {
+        $sql = "INSERT INTO users (username, password, email, fullname, user_type)
+                VALUES (?, ?, ?, ?, ?)";
+
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("ss", $username, $password);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        $stmt->bind_param("sssss", $username, $password, $email, $fullname, $user_type);
 
-        if ($result->num_rows === 1) {
-            $teacher = $result->fetch_assoc();
-            if (empty($teacher['profile_pic'])) {
-                $teacher['profile_pic'] = 'img/default.jpg';
-            }
-            return $teacher;
-        }
-        return false;
-    }
-
-    /* ----------- STUDENT LOGIN ----------- */
-    public function loginStudent($schoolId, $birthdate, $password) {
-        $birthdateFormatted = date('Y-m-d', strtotime($birthdate));
-
-        $sql = "
-            SELECT u.*, sd.school_id, sd.birthdate, sd.gender, sd.status
-            FROM users u
-            JOIN student_details sd ON sd.user_id = u.id
-            WHERE sd.school_id = ? AND sd.birthdate = ? AND u.password = ? AND u.user_type = 'Student'
-            LIMIT 1
-        ";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("sss", $schoolId, $birthdateFormatted, $password);
-        $stmt->execute();
-        $result = $stmt->get_result();
-
-        if ($result->num_rows === 1) {
-            $student = $result->fetch_assoc();
-            if (empty($student['profile_pic'])) {
-                $student['profile_pic'] = 'img/default.jpg';
-            }
-            return $student;
-        }
-        return false;
+        return $stmt->execute();
     }
 }
-/* ----------- AUTO-CREATE SUPERADMIN ----------- */
+
+/** ---------------------------------------------------------
+ * AUTO-CREATE DEFAULT SUPERADMIN IF NONE EXISTS
+ * --------------------------------------------------------- */
 function ensureSuperAdminExists() {
-    $db = new Database();
-    $conn = $db->getConnection();
+    $db = new mysqli("localhost", "root", "", "evelio_db");
 
-    $conn->query("\n        CREATE TABLE IF NOT EXISTS users (\n            id INT AUTO_INCREMENT PRIMARY KEY,\n            username VARCHAR(100) NOT NULL,\n            password VARCHAR(255) NOT NULL,\n            email VARCHAR(150) NOT NULL,\n            fullname VARCHAR(150) NOT NULL,\n            user_type VARCHAR(20) NOT NULL,\n            profile_pic VARCHAR(255) DEFAULT NULL\n        )\n    ");
+    if ($db->connect_error) {
+        die("Connection failed: " . $db->connect_error);
+    }
 
-    $superUsername = "superadmin";
-    $check = $conn->prepare("SELECT id FROM users WHERE username = ? AND user_type = 'Admin' LIMIT 1");
-    $check->bind_param("s", $superUsername);
-    $check->execute();
-    $result = $check->get_result();
+    $check = $db->query("SELECT * FROM users WHERE user_type = 'Admin' LIMIT 1");
 
-    if ($result->num_rows == 0) {
+    if ($check->num_rows == 0) {
+
+        $username = "superadmin";
+        $email = "admin@evelio.edu";
         $fullname = "System Administrator";
-        $email = "admin@a.evelio.edu";
-        $password = "admin"; // default
+        $password = "admin"; // default password
+        $type = "Admin";
 
-        $insert = $conn->prepare("
+        $insert = $db->prepare("
             INSERT INTO users (username, password, email, fullname, user_type)
-            VALUES (?, ?, ?, ?, 'Admin')
+            VALUES (?, ?, ?, ?, ?)
         ");
-        $insert->bind_param("ssss", $superUsername, $password, $email, $fullname);
+        $insert->bind_param("sssss", $username, $password, $email, $fullname, $type);
         $insert->execute();
 
-        echo "<p style='text-align:center; color:green; font-weight:bold;'>
-            ✅ SuperAdmin account created successfully!<br>
-            Username: superadmin | Password: admin
+        echo "<p style='color:green; text-align:center; font-weight:bold;'>
+            SuperAdmin created!<br>
+            Email: admin@evelio.edu | Password: admin
         </p>";
     }
-    $check->close();
-    $conn->close();
+
+    $db->close();
 }
 
-// ✅ Automatically ensure SuperAdmin exists
 ensureSuperAdminExists();
 ?>
