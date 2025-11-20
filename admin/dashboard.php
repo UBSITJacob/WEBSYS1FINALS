@@ -109,6 +109,12 @@ body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #f4f4f4
             </div>
         </li>
 
+        <!-- 🔑 NEW: Manage Sections link -->
+        <li>
+            <a class="nav-link" data-page="manage_sections.php">Manage Sections</a>
+        </li>
+        <!-- END NEW LINK -->
+
         <li class="dropdown">
             <a class="dropdown-toggle">Manage Teachers ▼</a>
             <div class="dropdown-content">
