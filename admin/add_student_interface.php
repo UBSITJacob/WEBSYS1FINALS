@@ -28,6 +28,17 @@
     <input type="text" value="1" readonly style="background:#f1f1f1;">
     <small style="color:#555;">Note: The default password is <b>1</b>. The student will be asked to change it upon first login.</small>
 
+       <label for="grade">Grade</label>
+    <select name="grade" id="grade" required>
+      <option value="">Select Grade</option>
+      <option value="7">7</option>
+      <option value="8">8</option>
+      <option value="9">9</option>
+      <option value="10">10</option>
+      <option value="10">11</option>
+      <option value="10">12</option>
+    </select>
+
     <button type="submit" id="submitBtn">Add Student</button>
   </form>
 </div>

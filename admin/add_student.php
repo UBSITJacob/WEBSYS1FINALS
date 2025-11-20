@@ -12,10 +12,15 @@ $fullname  = trim($_POST['fullname'] ?? '');
 $gender    = trim($_POST['gender'] ?? '');
 $birthdate = trim($_POST['birthdate'] ?? '');
 $email     = trim($_POST['email'] ?? '');
-$password  = "1"; // Default password (no hashing)
+$grade     = trim($_POST['grade'] ?? ''); // <--- Grade input collected as integer string
+$password  = "1"; // Default password
 
-// === VALIDATION ===
-if (empty($schoolId) || empty($fullname) || empty($gender) || empty($birthdate) || empty($email)) {
+// === HASH THE PASSWORD (Security Fix) ===
+$hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+// =========================================
+
+// === VALIDATION (Check all fields including grade) ===
+if (empty($schoolId) || empty($fullname) || empty($gender) || empty($birthdate) || empty($email) || empty($grade)) {
     echo json_encode(['status' => 'error', 'message' => 'All fields are required.']);
     exit;
 }
@@ -43,11 +48,13 @@ try {
     $checkUser->bind_param("s", $email);
     $checkUser->execute();
     $userResult = $checkUser->get_result();
+    $checkUser->close();
 
     $checkStudent = $conn->prepare("SELECT user_id FROM student_details WHERE school_id = ?");
     $checkStudent->bind_param("s", $schoolId);
     $checkStudent->execute();
     $studentResult = $checkStudent->get_result();
+    $checkStudent->close();
 
     if ($userResult->num_rows > 0 || $studentResult->num_rows > 0) {
         echo json_encode(['status' => 'error', 'message' => 'Student already exists (duplicate School ID or Email).']);
@@ -55,12 +62,12 @@ try {
         exit;
     }
 
-    // === INSERT INTO users ===
+    // === INSERT INTO users (using hashed password) ===
     $stmtUser = $conn->prepare("
         INSERT INTO users (username, password, email, fullname, user_type)
         VALUES (?, ?, ?, ?, 'Student')
     ");
-    $stmtUser->bind_param("ssss", $email, $password, $email, $fullname);
+    $stmtUser->bind_param("ssss", $email, $hashedPassword, $email, $fullname);
 
     if (!$stmtUser->execute()) {
         echo json_encode(['status' => 'error', 'message' => 'Failed to create user account.']);
@@ -69,30 +76,38 @@ try {
     }
 
     $userId = $conn->insert_id;
+    $stmtUser->close(); 
 
-    // === INSERT INTO student_details ===
+    // === INSERT INTO student_details (FIX: Including grade_level) ===
     $stmtDetails = $conn->prepare("
-        INSERT INTO student_details (user_id, school_id, birthdate, gender, status)
-        VALUES (?, ?, ?, ?, 'Active')
+        INSERT INTO student_details (user_id, school_id, grade_level, birthdate, gender, status)
+        VALUES (?, ?, ?, ?, ?, 'Active')
     ");
-    $stmtDetails->bind_param("isss", $userId, $schoolId, $birthdateFormatted, $gender);
+    
+    // 🔑 FIX: Bind parameters updated to include grade_level (i for integer)
+    // Bind parameters: i (userId) s (schoolId) i (grade) s (birthdate) s (gender)
+    $stmtDetails->bind_param("iisss", $userId, $schoolId, $grade, $birthdateFormatted, $gender); 
 
-    if ($stmtDetails->execute()) {
-        $conn->commit();
-        echo json_encode(['status' => 'success', 'message' => '✅ Student added successfully!']);
-    } else {
+    if (!$stmtDetails->execute()) {
         $conn->rollback();
         echo json_encode(['status' => 'error', 'message' => '❌ Failed to add student details.']);
+        $conn->close();
+        exit;
     }
-
-    $stmtUser->close();
     $stmtDetails->close();
+    
+    $conn->commit();
+    echo json_encode(['status' => 'success', 'message' => '✅ Student added successfully!']);
+    
     $conn->close();
 
 } catch (Exception $e) {
+    // Ensure rollback on catastrophic failure
+    if (isset($conn) && $conn->in_transaction) {
+        $conn->rollback();
+    }
     echo json_encode([
         'status' => 'error',
         'message' => 'Server error: ' . $e->getMessage()
     ]);
 }
-?>
