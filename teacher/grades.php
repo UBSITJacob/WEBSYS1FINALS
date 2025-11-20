@@ -1,14 +1,19 @@
 <?php
-// FIX: You MUST start the session to get the authenticated user's ID
-// session_start(); 
+session_start();
+if (!isset($_SESSION['teacher'])) {
+    header('Location: ../index.php');
+    exit;
+}
+
 require_once "teacher_functions.php";
 $teacherdb = new TeacherDB();
 
-// !!! CRITICAL FIX REQUIRED: 
-// Replace the hardcoded ID with the authenticated session user ID.
-// Example: $teacher_id = $_SESSION['user_id'] ?? 0;
-// Using 1 for now, but this is a security risk until fixed by proper login.
-$teacher_id = 1;
+// Use authenticated teacher id from session
+$teacher_id = isset($_SESSION['teacher']['id']) ? (int)$_SESSION['teacher']['id'] : 0;
+if ($teacher_id === 0) {
+    header('Location: ../index.php');
+    exit;
+}
 
 // load teacher loads (sections + subjects)
 $loads = $teacherdb->getTeacherLoads($teacher_id);

@@ -6,6 +6,8 @@
 -- Generation Time: Nov 14, 2025 at 01:53 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
+CREATE DATABASE IF NOT EXISTS evelio_db;
+USE evelio_db;
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;

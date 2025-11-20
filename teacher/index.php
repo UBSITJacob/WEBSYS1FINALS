@@ -1,13 +1,18 @@
 <?php
-// FIX: Start session for future authentication and check if the teacher is logged in.
-// session_start(); 
+// Ensure session is started and user is authenticated
+session_start();
+
+// Redirect to login if teacher session is not set
+if (!isset($_SESSION['teacher'])) {
+    header('Location: ../index.php');
+    exit;
+}
+
 require_once "teacher_functions.php";
 $teacherdb = new TeacherDB();
 
-// !!! CRITICAL FIX REQUIRED: 
-// Replace the hardcoded ID with the authenticated session user ID once login is set up.
-// For now, retaining the hardcoded ID = 1 for testing purposes.
-$teacher_id = 1;
+// Use authenticated teacher ID from session
+$teacher_id = isset($_SESSION['teacher']['id']) ? (int)$_SESSION['teacher']['id'] : 0;
 
 // 1. INITIALIZE ALL VARIABLES to prevent Undefined Variable Warnings (FIX)
 $teacher = null;

@@ -215,5 +215,36 @@ class TeacherDB {
         return $att;
     }
 
+    // Find internal student_id (user_id) by School ID / LRN
+public function getStudentIdBySchoolId($school_id) {
+    $sql = "SELECT user_id 
+            FROM student_details 
+            WHERE school_id = :sid
+            LIMIT 1";
+    $stmt = $this->conn->prepare($sql);
+    $stmt->bindParam(":sid", $school_id);
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row ? (int)$row['user_id'] : null;
+}
+
+// Wrapper: enroll a student using School ID instead of numeric user_id
+public function enrollStudentBySchoolId($school_id, $section_id, $academic_year) {
+    $student_id = $this->getStudentIdBySchoolId($school_id);
+    if (!$student_id) {
+        return [false, "Student with School ID {$school_id} not found."];
+    }
+
+    // Assuming you already have enrollStudent($student_id, $section_id, $academic_year)
+    $ok = $this->enrollStudent($student_id, $section_id, $academic_year);
+
+    if ($ok) {
+        return [true, "Student {$school_id} enrolled/updated successfully."];
+    } else {
+        return [false, "Error enrolling student {$school_id}. Please try again."];
+    }
+}
+
+
 }
 ?>
