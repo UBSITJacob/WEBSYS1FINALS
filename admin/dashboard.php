@@ -117,8 +117,12 @@ body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #f4f4f4
             </div>
         </li>
 
-        <li>
-            <a class="nav-link" data-page="manage_roles.php">Manage Roles</a>
+        <li class="dropdown">
+            <a class="dropdown-toggle">Manage Roles ▼</a>
+            <div class="dropdown-content">
+                <a class="nav-link" data-page="add_admin.php">Add Admin</a>
+                <a class="nav-link" data-page="manage_admin.php">Manage Admin</a>
+            </div>
         </li>
     </ul>
 </div>
