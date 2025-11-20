@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         if ($user['user_type'] == "Teacher") {
             $_SESSION['teacher'] = $user;
-            header("Location: teacher/dashboard.php");
+            header("Location: teacher/index.php");
             exit;
         }
         if ($user['user_type'] == "Student") {
