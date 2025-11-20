@@ -1,8 +1,13 @@
 <?php
+// FIX: You MUST start the session to get the authenticated user's ID
+// session_start(); 
 require_once "teacher_functions.php";
 $teacherdb = new TeacherDB();
 
-// TEMP — hardcoded teacher ID (replace with session later)
+// !!! CRITICAL FIX REQUIRED: 
+// Replace the hardcoded ID with the authenticated session user ID.
+// Example: $teacher_id = $_SESSION['user_id'] ?? 0;
+// Using 1 for now, but this is a security risk until fixed by proper login.
 $teacher_id = 1;
 
 // load teacher loads (sections + subjects)
@@ -51,16 +56,21 @@ if (isset($_POST['save_grades'])) {
                     $ok_count++;
                 }
             }
+            // Use a consistent status class for messages (ok/err)
             if ($ok_count > 0) {
                 $message = "✅ Saved {$ok_count} grade(s) successfully.";
+                $message_status = "ok";
             } else {
                 $message = "⚠️ No valid grades were submitted.";
+                $message_status = "err";
             }
         } else {
             $message = "⚠️ No grades submitted.";
+            $message_status = "err";
         }
     } else {
         $message = "⚠️ Please choose section, subject, and grading period.";
+        $message_status = "err";
     }
 }
 
@@ -99,147 +109,25 @@ if ($selected_section_id !== "" && $selected_subject_id !== "" && $selected_grad
 <html>
 <head>
     <title>Manage Grades</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: Arial;
-            overflow-x: hidden;
-        }
-
-        .topbar {
-            width: 100%;
-            background: #333;
-            color: white;
-            padding: 15px;
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 10;
-        }
-
-        .sidebar {
-            position: fixed;
-            top: 60px;
-            left: 0;
-            width: 220px;
-            height: calc(100vh - 60px);
-            background: #2d2d2d;
-            padding-top: 20px;
-            overflow-y: auto;
-        }
-        .sidebar ul {
-            list-style: none;
-            padding: 0;
-        }
-        .sidebar ul li {
-            padding: 12px 20px;
-        }
-        .sidebar ul li a {
-            color: white;
-            text-decoration: none;
-            display: block;
-        }
-        .sidebar ul li:hover {
-            background: #444;
-        }
-
-        .content {
-            margin-left: 240px;
-            margin-top: 80px;
-            padding: 20px;
-            width: calc(100% - 260px);
-            box-sizing: border-box;
-        }
-
-        .card {
-            background: white;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 6px;
-            box-shadow: 0px 0px 4px #ccc;
-        }
-
-        .form-row {
-            margin-bottom: 10px;
-        }
-
-        label {
-            display: block;
-            font-size: 14px;
-            margin-bottom: 4px;
-        }
-
-        input[type="text"],
-        input[type="number"],
-        select {
-            width: 100%;
-            padding: 7px;
-            font-size: 14px;
-            box-sizing: border-box;
-        }
-
-        button {
-            padding: 8px 14px;
-            background: #333;
-            border: none;
-            border-radius: 4px;
-            color: white;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background: #555;
-        }
-
-        .message {
-            margin-bottom: 10px;
-            padding: 8px;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        .message.ok {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .message.err {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            font-size: 14px;
-        }
-        table, th, td {
-            border: 1px solid #ccc;
-        }
-        th, td {
-            padding: 6px 8px;
-        }
-    </style>
-</head>
+    <link rel="stylesheet" href="teacher_styles.css"> 
+    </head>
 <body>
 
 <?php include 'header.php'; ?>
 <?php include 'sidebar.php'; ?>
 
-<div class="content">
+<div class="main-content">
 
     <div class="card">
         <h2>Manage Grades</h2>
         <p>Select a section, subject, academic year, and grading period to encode or edit grades.</p>
 
-        <?php if ($message !== ""): ?>
-            <div class="message <?php echo (strpos($message, "✅") === 0) ? "ok" : "err"; ?>">
+        <?php if (isset($message_status) && $message !== ""): ?>
+            <div class="message <?php echo $message_status; ?>">
                 <?php echo htmlspecialchars($message); ?>
             </div>
         <?php endif; ?>
 
-        <!-- FILTER FORM (GET) -->
         <form method="get" action="grades.php">
             <div class="form-row">
                 <label for="section_id">Section:</label>
@@ -351,31 +239,35 @@ if ($selected_section_id !== "" && $selected_subject_id !== "" && $selected_grad
                 <input type="hidden" name="grading_period" value="<?php echo htmlspecialchars($selected_grading_period); ?>">
 
                 <table>
-                    <tr>
-                        <th>Student ID</th>
-                        <th>School ID</th>
-                        <th>Full Name</th>
-                        <th>Grade</th>
-                    </tr>
-                    <?php foreach ($students_in_section as $stu): ?>
-                        <?php
-                        $sid = $stu['student_id'];
-                        $prefill = isset($existing_grades[$sid]) ? $existing_grades[$sid] : "";
-                        ?>
+                    <thead style="background:#007bff; color:white;">
                         <tr>
-                            <td><?php echo htmlspecialchars($sid); ?></td>
-                            <td><?php echo htmlspecialchars($stu['school_id']); ?></td>
-                            <td><?php echo htmlspecialchars($stu['fullname']); ?></td>
-                            <td>
-                                <input type="number"
-                                       name="grade[<?php echo $sid; ?>]"
-                                       step="0.01"
-                                       min="0"
-                                       max="100"
-                                       value="<?php echo htmlspecialchars($prefill); ?>">
-                            </td>
+                            <th>Student ID</th>
+                            <th>School ID</th>
+                            <th>Full Name</th>
+                            <th>Grade</th>
                         </tr>
-                    <?php endforeach; ?>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($students_in_section as $stu): ?>
+                            <?php
+                            $sid = $stu['student_id'];
+                            $prefill = isset($existing_grades[$sid]) ? $existing_grades[$sid] : "";
+                            ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($sid); ?></td>
+                                <td><?php echo htmlspecialchars($stu['school_id']); ?></td>
+                                <td><?php echo htmlspecialchars($stu['fullname']); ?></td>
+                                <td>
+                                    <input type="number"
+                                           name="grade[<?php echo $sid; ?>]"
+                                           step="0.01"
+                                           min="0"
+                                           max="100"
+                                           value="<?php echo htmlspecialchars($prefill); ?>">
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
                 </table>
 
                 <br>

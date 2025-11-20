@@ -1,8 +1,13 @@
 <?php
+// FIX: You MUST start the session to get the authenticated user's ID
+// session_start(); 
 require_once "teacher_functions.php";
 $teacherdb = new TeacherDB();
 
-// TEMP — hardcoded teacher ID (replace with session later)
+// !!! CRITICAL FIX REQUIRED: 
+// Replace the hardcoded ID with the authenticated session user ID.
+// Example: $teacher_id = $_SESSION['user_id'] ?? 0;
+// Using 1 for now, but this is a security risk until fixed by proper login.
 $teacher_id = 1;
 
 // get advisory section (if any)
@@ -29,121 +34,14 @@ if ($advisory && isset($advisory['id'])) {
 <html>
 <head>
     <title>Advisory Class</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: Arial;
-            overflow-x: hidden;
-        }
-
-        .topbar {
-            width: 100%;
-            background: #333;
-            color: white;
-            padding: 15px;
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 10;
-        }
-
-        .sidebar {
-            position: fixed;
-            top: 60px;
-            left: 0;
-            width: 220px;
-            height: calc(100vh - 60px);
-            background: #2d2d2d;
-            padding-top: 20px;
-            overflow-y: auto;
-        }
-        .sidebar ul {
-            list-style: none;
-            padding: 0;
-        }
-        .sidebar ul li {
-            padding: 12px 20px;
-        }
-        .sidebar ul li a {
-            color: white;
-            text-decoration: none;
-            display: block;
-        }
-        .sidebar ul li:hover {
-            background: #444;
-        }
-
-        .content {
-            margin-left: 240px;
-            margin-top: 80px;
-            padding: 20px;
-            width: calc(100% - 260px);
-            box-sizing: border-box;
-        }
-
-        .card {
-            background: white;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 6px;
-            box-shadow: 0px 0px 4px #ccc;
-        }
-
-        .form-row {
-            margin-bottom: 10px;
-        }
-
-        label {
-            display: block;
-            font-size: 14px;
-            margin-bottom: 4px;
-        }
-
-        input[type="text"] {
-            width: 100%;
-            padding: 7px;
-            font-size: 14px;
-            box-sizing: border-box;
-        }
-
-        button {
-            padding: 8px 14px;
-            background: #333;
-            border: none;
-            border-radius: 4px;
-            color: white;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background: #555;
-        }
-
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            font-size: 14px;
-        }
-        table, th, td {
-            border: 1px solid #ccc;
-        }
-        th, td {
-            padding: 6px 8px;
-        }
-
-        .small-text {
-            font-size: 12px;
-            color: #666;
-        }
-    </style>
-</head>
+    <link rel="stylesheet" href="teacher_styles.css">
+    </head>
 <body>
 
 <?php include 'header.php'; ?>
 <?php include 'sidebar.php'; ?>
 
-<div class="content">
+<div class="main-content">
 
     <div class="card">
         <h2>Advisory Class</h2>
@@ -160,7 +58,7 @@ if ($advisory && isset($advisory['id'])) {
                 <?php endif; ?>
             </p>
 
-            <form method="get" action="advisory.php" style="max-width: 300px;">
+            <form method="get" action="advisory.php">
                 <div class="form-row">
                     <label for="academic_year">Academic Year (e.g. 2024-2025):</label>
                     <input type="text" name="academic_year" id="academic_year"
@@ -180,23 +78,27 @@ if ($advisory && isset($advisory['id'])) {
 
             <?php if (!empty($advisory_students)): ?>
                 <table>
-                    <tr>
-                        <th>#</th>
-                        <th>Student ID</th>
-                        <th>School ID</th>
-                        <th>Full Name</th>
-                    </tr>
-                    <?php
-                    $count = 1;
-                    foreach ($advisory_students as $stu):
-                    ?>
+                    <thead style="background:#007bff; color:white;">
                         <tr>
-                            <td><?php echo $count++; ?></td>
-                            <td><?php echo htmlspecialchars($stu['student_id']); ?></td>
-                            <td><?php echo htmlspecialchars($stu['school_id']); ?></td>
-                            <td><?php echo htmlspecialchars($stu['fullname']); ?></td>
+                            <th>#</th>
+                            <th>Student ID</th>
+                            <th>School ID</th>
+                            <th>Full Name</th>
                         </tr>
-                    <?php endforeach; ?>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $count = 1;
+                        foreach ($advisory_students as $stu):
+                        ?>
+                            <tr>
+                                <td><?php echo $count++; ?></td>
+                                <td><?php echo htmlspecialchars($stu['student_id']); ?></td>
+                                <td><?php echo htmlspecialchars($stu['school_id']); ?></td>
+                                <td><?php echo htmlspecialchars($stu['fullname']); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
                 </table>
                 <p class="small-text">
                     These students are enrolled in your advisory section for the selected academic year.

@@ -1,17 +1,23 @@
 <?php
+// FIX: You MUST start the session to get the authenticated user's ID
+// session_start(); 
 require_once "teacher_functions.php";
 $teacherdb = new TeacherDB();
 
-// TEMP — hardcoded teacher ID for now
+// !!! CRITICAL FIX REQUIRED: 
+// Replace the hardcoded ID with the authenticated session user ID once login is set up.
+// Example: $teacher_id = $_SESSION['user_id'] ?? 0;
+// Using 1 for now, but this is a security risk until fixed by proper login.
 $teacher_id = 1;
 
 // Load teacher info (optional, for display if you want)
-$teacher   = $teacherdb->getTeacherInfo($teacher_id);
+$teacher = $teacherdb->getTeacherInfo($teacher_id);
 // Load all sections/subjects assigned to this teacher
-$loads     = $teacherdb->getTeacherLoads($teacher_id);
+$loads = $teacherdb->getTeacherLoads($teacher_id);
 
 // Message for feedback
 $message = "";
+$message_status = ""; // New variable to hold 'ok' or 'err'
 
 // Default values
 $selected_section_id = "";
@@ -19,8 +25,8 @@ $selected_academic_year = "2024-2025"; // you can change this default
 
 // Handle form submit
 if (isset($_POST['enroll_submit'])) {
-    $student_id   = trim($_POST['student_id']);
-    $section_id   = trim($_POST['section_id']);
+    $student_id = trim($_POST['student_id']);
+    $section_id = trim($_POST['section_id']);
     $academic_year = trim($_POST['academic_year']);
 
     if ($student_id !== "" && $section_id !== "" && $academic_year !== "") {
@@ -28,14 +34,17 @@ if (isset($_POST['enroll_submit'])) {
         $ok = $teacherdb->enrollStudent((int)$student_id, (int)$section_id, $academic_year);
         if ($ok) {
             $message = "✅ Student ID {$student_id} enrolled/updated successfully.";
+            $message_status = "ok";
             // keep the selected values for reloading students
-            $selected_section_id   = $section_id;
+            $selected_section_id = $section_id;
             $selected_academic_year = $academic_year;
         } else {
             $message = "❌ Error while enrolling student. Please check inputs.";
+            $message_status = "err";
         }
     } else {
         $message = "⚠️ Please fill in all fields.";
+        $message_status = "err";
     }
 }
 
@@ -56,145 +65,21 @@ if ($selected_section_id !== "" && $selected_academic_year !== "") {
 <html>
 <head>
     <title>Enroll Students</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: Arial;
-            overflow-x: hidden; /* stops horizontal scroll */
-        }
-
-        /* TOP BAR comes from header.php (.topbar), but keep this if needed */
-        .topbar {
-            width: 100%;
-            background: #333;
-            color: white;
-            padding: 15px;
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 10;
-        }
-
-        /* SIDEBAR comes from sidebar.php (.sidebar) */
-        .sidebar {
-            position: fixed;
-            top: 60px; /* below header */
-            left: 0;
-            width: 220px;
-            height: calc(100vh - 60px);
-            background: #2d2d2d;
-            padding-top: 20px;
-            overflow-y: auto;
-        }
-        .sidebar ul {
-            list-style: none;
-            padding: 0;
-        }
-        .sidebar ul li {
-            padding: 12px 20px;
-        }
-        .sidebar ul li a {
-            color: white;
-            text-decoration: none;
-            display: block;
-        }
-        .sidebar ul li:hover {
-            background: #444;
-        }
-
-        /* CONTENT */
-        .content {
-            margin-left: 240px;  /* space for sidebar */
-            margin-top: 80px;    /* space for header */
-            padding: 20px;
-            width: calc(100% - 260px);
-            box-sizing: border-box;
-        }
-
-        .card {
-            background: white;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 6px;
-            box-shadow: 0px 0px 4px #ccc;
-        }
-
-        .form-row {
-            margin-bottom: 10px;
-        }
-
-        label {
-            display: block;
-            font-size: 14px;
-            margin-bottom: 4px;
-        }
-
-        input[type="text"],
-        input[type="number"],
-        select {
-            width: 100%;
-            padding: 7px;
-            font-size: 14px;
-            box-sizing: border-box;
-        }
-
-        button {
-            padding: 8px 14px;
-            background: #333;
-            border: none;
-            border-radius: 4px;
-            color: white;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background: #555;
-        }
-
-        .message {
-            margin-bottom: 10px;
-            padding: 8px;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        .message.ok {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .message.err {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            font-size: 14px;
-        }
-        table, th, td {
-            border: 1px solid #ccc;
-        }
-        th, td {
-            padding: 6px 8px;
-        }
-    </style>
-</head>
+    <link rel="stylesheet" href="teacher_styles.css"> 
+    </head>
 <body>
 
 <?php include 'header.php'; ?>
 <?php include 'sidebar.php'; ?>
 
-<div class="content">
+<div class="main-content">
 
     <div class="card">
         <h2>Enroll Students</h2>
         <p>Use this form to enroll a student into one of your sections for a specific academic year.</p>
 
-        <?php if ($message !== ""): ?>
-            <div class="message <?php echo (strpos($message, "✅") === 0) ? "ok" : "err"; ?>">
+        <?php if (isset($message_status) && $message !== ""): ?>
+            <div class="message <?php echo $message_status; ?>">
                 <?php echo htmlspecialchars($message); ?>
             </div>
         <?php endif; ?>
@@ -289,18 +174,22 @@ if ($selected_section_id !== "" && $selected_academic_year !== "") {
 
             <?php if (!empty($students_in_section)): ?>
                 <table>
-                    <tr>
-                        <th>Student ID</th>
-                        <th>School ID</th>
-                        <th>Full Name</th>
-                    </tr>
-                    <?php foreach ($students_in_section as $stu): ?>
+                    <thead style="background:#007bff; color:white;">
                         <tr>
-                            <td><?php echo htmlspecialchars($stu['student_id']); ?></td>
-                            <td><?php echo htmlspecialchars($stu['school_id']); ?></td>
-                            <td><?php echo htmlspecialchars($stu['fullname']); ?></td>
+                            <th>Student ID</th>
+                            <th>School ID</th>
+                            <th>Full Name</th>
                         </tr>
-                    <?php endforeach; ?>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($students_in_section as $stu): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($stu['student_id']); ?></td>
+                                <td><?php echo htmlspecialchars($stu['school_id']); ?></td>
+                                <td><?php echo htmlspecialchars($stu['fullname']); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
                 </table>
             <?php else: ?>
                 <p>No students enrolled yet for this section and academic year.</p>

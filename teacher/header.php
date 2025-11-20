@@ -1,30 +1,15 @@
-<div class="topbar">
-    <div class="topbar-title">
-        <h2>Teacher Portal</h2>
-    </div>
-
-    <div class="topbar-user">
-        <!-- Later: dynamic teacher name -->
-        <span>Welcome, Teacher</span>
+<div class="header" id="header">
+    <div class="title">Evelio AMS - Teacher Portal</div>
+    <div class="controls">
+        <button id="logoutBtn" style="background:#dc3545;">Sign Out</button>
     </div>
 </div>
 
-<style>
-.topbar {
-    width: 100%;
-    background: #333;
-    color: white;
-    padding: 15px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.topbar-title h2 {
-    margin: 0;
-    font-size: 22px;
-}
-.topbar-user {
-    font-size: 14px;
-    margin-right: 25px;
-}
-</style>
+<script>
+    // Simple logout logic
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        // This should hit a logout script that destroys the session
+        alert('Logging out...');
+        window.location.href = '../index.php'; 
+    });
+</script>
