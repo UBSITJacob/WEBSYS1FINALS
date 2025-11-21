@@ -5,11 +5,19 @@
   <h2>Add New Student</h2>
   <form id="addStudentForm" autocomplete="off">
 
+    
+
+    <label for="lrn">LRN (Learner Reference Number)</label>
+    <input type="text" name="lrn" id="lrn" required placeholder="Enter LRN">
+
     <label for="schoolId">School ID</label>
     <input type="text" name="schoolId" id="schoolId" required placeholder="e.g. 20258393">
 
     <label for="fullname">Full Name</label>
     <input type="text" name="fullname" id="fullname" required placeholder="Enter full name">
+
+    <label for="username">Username</label>
+    <input type="text" name="username" id="username" required placeholder="Enter username">
 
     <label for="gender">Gender</label>
     <select name="gender" id="gender" required>
@@ -18,30 +26,33 @@
       <option value="Female">Female</option>
     </select>
 
-    <label for="birthdate">Date of Birth</label>
-    <input type="date" name="birthdate" id="birthdate" required>
+    <label for="contactNo">Contact Number</label>
+    <input type="text" name="contactNo" id="contactNo" required placeholder="e.g. 09123456789">
 
     <label for="email">Email</label>
-    <input type="email" name="email" id="email" required placeholder="Enter  email (e.g. student@evelio.edu)">
+    <input type="email" name="email" id="email" required placeholder="Enter email">
 
-    <label>Default Password</label>
-    <input type="text" value="1" readonly style="background:#f1f1f1;">
-    <small style="color:#555;">Note: The default password is <b>1</b>. The student will be asked to change it upon first login.</small>
-
-       <label for="grade">Grade</label>
+     <label for="grade">Grade</label>
     <select name="grade" id="grade" required>
       <option value="">Select Grade</option>
       <option value="7">7</option>
       <option value="8">8</option>
       <option value="9">9</option>
       <option value="10">10</option>
-      <option value="10">11</option>
-      <option value="10">12</option>
+      <option value="11">11</option>
+      <option value="12">12</option>
     </select>
+
+    <label>Default Password</label>
+    <input type="text" value="1" readonly style="background:#f1f1f1;">
+    <small style="color:#555;">Default password is <b>1</b>. Change required at first login.</small>
+
+   
 
     <button type="submit" id="submitBtn">Add Student</button>
   </form>
 </div>
+
 
 <script>
 (() => {

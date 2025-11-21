@@ -31,7 +31,7 @@ try {
     }
     $d1->close();
 
-    // delete users row (if you want to keep the user row, remove this block)
+    // delete users row
     $d2 = $conn->prepare("DELETE FROM users WHERE id = ?");
     $d2->bind_param("i", $id);
     if (!$d2->execute()) {
@@ -46,7 +46,7 @@ try {
     $conn->commit();
     echo json_encode(['status'=>'success','message'=>'Student deleted successfully.']);
 } catch (Exception $e) {
-    $conn->rollback();
+    if ($conn->in_transaction) $conn->rollback();
     echo json_encode(['status'=>'error','message'=>'Server error: '.$e->getMessage()]);
 } finally {
     $conn->close();

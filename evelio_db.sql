@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 21, 2025 at 03:53 PM
+-- Generation Time: Nov 21, 2025 at 07:31 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -157,8 +157,9 @@ INSERT INTO `strand` (`id`, `strand_code`, `strand_name`) VALUES
 CREATE TABLE `student_details` (
   `user_id` int(11) NOT NULL,
   `school_id` varchar(20) NOT NULL,
+  `lrn` varchar(20) NOT NULL,
   `grade_level` int(11) DEFAULT NULL,
-  `birthdate` date DEFAULT NULL,
+  `contact_no` varchar(20) NOT NULL,
   `gender` varchar(10) DEFAULT NULL,
   `status` enum('Active','Alumni','Transferred','Dropped') DEFAULT 'Active'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -214,6 +215,13 @@ CREATE TABLE `users` (
   `user_type` enum('Admin','Teacher','Student') NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `users`
+--
+
+INSERT INTO `users` (`id`, `username`, `password`, `email`, `fullname`, `user_type`, `created_at`) VALUES
+(23, 'superadmin', 'admin', 'admin@evelio.edu', 'System Administrator', 'Admin', '2025-11-21 18:31:33');
 
 --
 -- Indexes for dumped tables
@@ -284,7 +292,8 @@ ALTER TABLE `strand`
 --
 ALTER TABLE `student_details`
   ADD PRIMARY KEY (`user_id`),
-  ADD UNIQUE KEY `school_id` (`school_id`);
+  ADD UNIQUE KEY `school_id` (`school_id`),
+  ADD UNIQUE KEY `lrn` (`lrn`);
 
 --
 -- Indexes for table `subject`
@@ -358,7 +367,7 @@ ALTER TABLE `subject`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- Constraints for dumped tables

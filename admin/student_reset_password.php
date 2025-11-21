@@ -30,7 +30,7 @@ try {
     }
     $check->close();
 
-    // reset password to default '1' (plain text)
+    // reset password to default '1' (plain text) — keep behavior consistent with your app
     $newPassword = '1';
     $upd = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
     $upd->bind_param("si", $newPassword, $id);
