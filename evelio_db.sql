@@ -3,11 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 14, 2025 at 01:53 PM
+-- Generation Time: Nov 21, 2025 at 01:08 AM
 -- Server version: 10.4.32-MariaDB
--- PHP Version: 8.2.12
-CREATE DATABASE IF NOT EXISTS evelio_db;
-USE evelio_db;
+-- PHP Version: 8.0.30
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -35,6 +33,13 @@ CREATE TABLE `enrollment` (
   `section_id` int(11) NOT NULL,
   `academic_year` varchar(9) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `enrollment`
+--
+
+INSERT INTO `enrollment` (`id`, `student_id`, `section_id`, `academic_year`) VALUES
+(1, 2, 1, '2024-2025');
 
 -- --------------------------------------------------------
 
@@ -85,6 +90,24 @@ CREATE TABLE `section` (
   `adviser_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `section`
+--
+
+INSERT INTO `section` (`id`, `grade_level`, `section_letter`, `strand_id`, `section_name`, `adviser_id`) VALUES
+(1, 7, 'A', NULL, '7A', NULL),
+(2, 7, 'B', NULL, '7B', NULL),
+(3, 7, 'C', NULL, '7C', NULL),
+(4, 8, 'A', NULL, '8A', NULL),
+(5, 8, 'B', NULL, '8B', NULL),
+(6, 8, 'C', NULL, '8C', NULL),
+(7, 9, 'A', NULL, '9A', NULL),
+(8, 9, 'B', NULL, '9B', NULL),
+(9, 9, 'C', NULL, '9C', NULL),
+(10, 10, 'A', NULL, '10A', NULL),
+(11, 10, 'B', NULL, '10B', NULL),
+(12, 10, 'C', NULL, '10C', NULL);
+
 -- --------------------------------------------------------
 
 --
@@ -128,10 +151,18 @@ INSERT INTO `strand` (`id`, `strand_code`, `strand_name`) VALUES
 CREATE TABLE `student_details` (
   `user_id` int(11) NOT NULL,
   `school_id` varchar(20) NOT NULL,
+  `grade_level` int(11) DEFAULT NULL,
   `birthdate` date DEFAULT NULL,
   `gender` varchar(10) DEFAULT NULL,
   `status` enum('Active','Alumni','Transferred','Dropped') DEFAULT 'Active'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `student_details`
+--
+
+INSERT INTO `student_details` (`user_id`, `school_id`, `grade_level`, `birthdate`, `gender`, `status`) VALUES
+(2, '1', 7, '2025-11-21', 'Male', 'Active');
 
 -- --------------------------------------------------------
 
@@ -169,6 +200,13 @@ CREATE TABLE `teacher_details` (
   `status` enum('Active','Inactive','Leave') DEFAULT 'Active'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `teacher_details`
+--
+
+INSERT INTO `teacher_details` (`user_id`, `faculty_id`, `gender`, `status`) VALUES
+(3, '1', 'Male', 'Active');
+
 -- --------------------------------------------------------
 
 --
@@ -184,6 +222,15 @@ CREATE TABLE `users` (
   `user_type` enum('Admin','Teacher','Student') NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `users`
+--
+
+INSERT INTO `users` (`id`, `username`, `password`, `email`, `fullname`, `user_type`, `created_at`) VALUES
+(1, 'superadmin', 'admin', 'admin@evelio.edu', 'System Administrator', 'Admin', '2025-11-20 23:51:57'),
+(2, '1@gmail.com', '$2y$10$MDG/RL1Zvl/TYSZp/5roJOtxC/kM4zUMnya.sfPAHOBgMuUlyov.m', '1@gmail.com', '1', 'Student', '2025-11-21 00:01:49'),
+(3, 'teacher', '1', 'teacher@gmail.com', 'teacher', 'Teacher', '2025-11-21 00:03:05');
 
 --
 -- Indexes for dumped tables
@@ -280,7 +327,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `enrollment`
 --
 ALTER TABLE `enrollment`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `grade`
@@ -298,7 +345,7 @@ ALTER TABLE `monthly_attendance_summary`
 -- AUTO_INCREMENT for table `section`
 --
 ALTER TABLE `section`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `section_assignment`
@@ -322,7 +369,7 @@ ALTER TABLE `subject`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- Constraints for dumped tables
