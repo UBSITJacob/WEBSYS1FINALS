@@ -16,7 +16,7 @@ $grade     = trim($_POST['grade'] ?? ''); // <--- Grade input collected as integ
 $password  = "1"; // Default password
 
 // === HASH THE PASSWORD (Security Fix) ===
-$hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+// $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 // =========================================
 
 // === VALIDATION (Check all fields including grade) ===
@@ -67,7 +67,7 @@ try {
         INSERT INTO users (username, password, email, fullname, user_type)
         VALUES (?, ?, ?, ?, 'Student')
     ");
-    $stmtUser->bind_param("ssss", $email, $hashedPassword, $email, $fullname);
+    $stmtUser->bind_param("ssss", $email, $password, $email, $fullname);
 
     if (!$stmtUser->execute()) {
         echo json_encode(['status' => 'error', 'message' => 'Failed to create user account.']);
