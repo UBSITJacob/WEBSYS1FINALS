@@ -126,8 +126,8 @@ body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #f4f4f4
         <li class="dropdown">
             <a class="dropdown-toggle">Manage Roles ▼</a>
             <div class="dropdown-content">
-                <a class="nav-link" data-page="add_admin.php">Add Admin</a>
-                <a class="nav-link" data-page="manage_admin.php">Manage Admin</a>
+                <a class="nav-link" data-page="add_admin_interface.php">Add Admin</a>
+                <a class="nav-link" data-page="manage_admins.php">Manage Admin</a>
             </div>
         </li>
     </ul>

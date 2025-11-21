@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 21, 2025 at 01:08 AM
+-- Generation Time: Nov 21, 2025 at 03:53 PM
 -- Server version: 10.4.32-MariaDB
--- PHP Version: 8.0.30
+-- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -24,6 +24,19 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `admin_details`
+--
+
+CREATE TABLE `admin_details` (
+  `user_id` int(11) NOT NULL,
+  `admin_id` varchar(50) NOT NULL,
+  `gender` varchar(10) DEFAULT NULL,
+  `status` enum('Active','Inactive') DEFAULT 'Active'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `enrollment`
 --
 
@@ -33,13 +46,6 @@ CREATE TABLE `enrollment` (
   `section_id` int(11) NOT NULL,
   `academic_year` varchar(9) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `enrollment`
---
-
-INSERT INTO `enrollment` (`id`, `student_id`, `section_id`, `academic_year`) VALUES
-(1, 2, 1, '2024-2025');
 
 -- --------------------------------------------------------
 
@@ -157,13 +163,6 @@ CREATE TABLE `student_details` (
   `status` enum('Active','Alumni','Transferred','Dropped') DEFAULT 'Active'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `student_details`
---
-
-INSERT INTO `student_details` (`user_id`, `school_id`, `grade_level`, `birthdate`, `gender`, `status`) VALUES
-(2, '1', 7, '2025-11-21', 'Male', 'Active');
-
 -- --------------------------------------------------------
 
 --
@@ -200,13 +199,6 @@ CREATE TABLE `teacher_details` (
   `status` enum('Active','Inactive','Leave') DEFAULT 'Active'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `teacher_details`
---
-
-INSERT INTO `teacher_details` (`user_id`, `faculty_id`, `gender`, `status`) VALUES
-(3, '1', 'Male', 'Active');
-
 -- --------------------------------------------------------
 
 --
@@ -224,17 +216,14 @@ CREATE TABLE `users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `users`
---
-
-INSERT INTO `users` (`id`, `username`, `password`, `email`, `fullname`, `user_type`, `created_at`) VALUES
-(1, 'superadmin', 'admin', 'admin@evelio.edu', 'System Administrator', 'Admin', '2025-11-20 23:51:57'),
-(2, '1@gmail.com', '$2y$10$MDG/RL1Zvl/TYSZp/5roJOtxC/kM4zUMnya.sfPAHOBgMuUlyov.m', '1@gmail.com', '1', 'Student', '2025-11-21 00:01:49'),
-(3, 'teacher', '1', 'teacher@gmail.com', 'teacher', 'Teacher', '2025-11-21 00:03:05');
-
---
 -- Indexes for dumped tables
 --
+
+--
+-- Indexes for table `admin_details`
+--
+ALTER TABLE `admin_details`
+  ADD PRIMARY KEY (`user_id`);
 
 --
 -- Indexes for table `enrollment`
@@ -369,11 +358,17 @@ ALTER TABLE `subject`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- Constraints for dumped tables
 --
+
+--
+-- Constraints for table `admin_details`
+--
+ALTER TABLE `admin_details`
+  ADD CONSTRAINT `admin_details_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `enrollment`
