@@ -67,13 +67,13 @@ if (isset($_POST['save_grades']) && $save_period) {
 
 // --- 3. Load All Necessary Data for Display ---
 
-// 🔑 Fetches specific class info for display (Implemented in teacher_functions.php)
+// Fetches specific class info for display (Implemented in teacher_functions.php)
 $class_info = $teacherdb->getClassInfo($selected_section_id, $selected_subject_id, $teacher_id);
 
 // Fetches all students enrolled in the section
 $students_in_section = $teacherdb->getSectionStudents($selected_section_id, $selected_academic_year);
 
-// 🔑 Fetches all existing grades for this class across all 5 periods
+// Fetches all existing grades for this class across all 5 periods
 $all_grades_for_class = $teacherdb->getAllGradesForClass($selected_section_id, $selected_subject_id);
 
 // Define periods for column headers
@@ -82,6 +82,10 @@ $periods = ['1st Qtr', '2nd Qtr', '3rd Qtr', '4th Qtr', 'Final'];
 // Set the currently active period for input visibility. If POST just happened, use $save_period.
 // Otherwise, default to the 1st Qtr.
 $active_input_period = $save_period ?: $periods[0];
+
+// Periods that teachers are allowed to encode (Final is computed automatically)
+$input_periods = ['1st Qtr', '2nd Qtr', '3rd Qtr', '4th Qtr'];
+
 
 ?>
 <!DOCTYPE html>
@@ -128,15 +132,18 @@ $active_input_period = $save_period ?: $periods[0];
         
         <?php if (!empty($students_in_section)): ?>
         
-        <form method="post" action="grades.php">
+        <form method="post" action="grades.php" id="gradesForm">
             
             <div class="selection-bar">
                 <label for="grading_period">Encode Grades for Period:</label>
                 <select name="grading_period" id="grading_period" required>
-                    <?php foreach ($periods as $p): ?>
-                        <option value="<?php echo $p; ?>" <?php if ($active_input_period === $p) echo 'selected'; ?>><?php echo $p; ?></option>
+                    <?php foreach ($input_periods as $p): ?>
+                        <option value="<?php echo $p; ?>" <?php if ($active_input_period === $p) echo 'selected'; ?>>
+                            <?php echo $p; ?>
+                        </option>
                     <?php endforeach; ?>
                 </select>
+
                 <button type="submit" name="save_grades" style="width: auto;">Save Grades</button>
             </div>
 
@@ -157,32 +164,52 @@ $active_input_period = $save_period ?: $periods[0];
                     </thead>
                     <tbody>
                         <?php $row_num = 1; foreach ($students_in_section as $stu): ?>
-                            <?php $sid = $stu['student_id']; ?>
+                            <?php 
+                                $sid = $stu['student_id']; 
+                                $grades_for_student = $all_grades_for_class[$sid] ?? [];
+
+                                // Get quarterly grades (if they exist) as numbers
+                                $g1 = isset($grades_for_student['1st Qtr']) ? (float)$grades_for_student['1st Qtr'] : null;
+                                $g2 = isset($grades_for_student['2nd Qtr']) ? (float)$grades_for_student['2nd Qtr'] : null;
+                                $g3 = isset($grades_for_student['3rd Qtr']) ? (float)$grades_for_student['3rd Qtr'] : null;
+                                $g4 = isset($grades_for_student['4th Qtr']) ? (float)$grades_for_student['4th Qtr'] : null;
+
+                                // Compute final average only if ALL 4 quarters are present
+                                $finalAverage = null;
+                                if ($g1 !== null && $g2 !== null && $g3 !== null && $g4 !== null) {
+                                    $finalAverage = round(($g1 + $g2 + $g3 + $g4) / 4, 2); // e.g. 89.25
+                                }
+                            ?>
                             <tr>
                                 <td><?php echo $row_num++; ?></td>
                                 <td style="text-align: left;"><?php echo htmlspecialchars($stu['fullname']); ?></td>
-                                
+
                                 <?php foreach ($periods as $p): ?>
                                     <td style="text-align: center;">
-                                        <?php 
-                                        // Grade value for this student and period
-                                        $grade_value = $all_grades_for_class[$sid][$p] ?? '';
-                                        
-                                        // Show input field ONLY for the currently selected period
-                                        if ($active_input_period === $p): 
-                                        ?>
-                                            <input type="number" 
-                                                   name="grade[<?php echo $sid; ?>]" 
-                                                   step="0.01" min="60" max="100" 
-                                                   value="<?php echo htmlspecialchars($grade_value); ?>">
+                                        <?php if ($p === 'Final'): ?>
+                                            <?php echo ($finalAverage !== null) ? number_format($finalAverage, 2) : '-'; ?>
                                         <?php else: ?>
-                                            <?php echo htmlspecialchars($grade_value) ?: '-'; ?>
+                                            <?php 
+                                                // Grade value for this student and this quarter
+                                                $grade_value = $grades_for_student[$p] ?? '';
+
+                                                // Show input only for the selected quarter (1st–4th)
+                                                if ($active_input_period === $p): 
+                                            ?>
+                                                <input type="number" 
+                                                    name="grade[<?php echo $sid; ?>]" 
+                                                    step="0.01" min="60" max="100" 
+                                                    value="<?php echo htmlspecialchars($grade_value); ?>">
+                                            <?php else: ?>
+                                                <?php echo ($grade_value !== '' ? htmlspecialchars($grade_value) : '-'); ?>
+                                            <?php endif; ?>
                                         <?php endif; ?>
                                     </td>
                                 <?php endforeach; ?>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
+
                 </table>
             </div>
             <p style="margin-top: 15px; font-size: 0.9em;">
@@ -195,6 +222,22 @@ $active_input_period = $save_period ?: $periods[0];
         <?php endif; ?>
     </div>
 </div>
+
+<script>
+    // When teacher changes the quarter, reload the page with that quarter active
+    document.addEventListener('DOMContentLoaded', function () {
+        var gradingSelect = document.getElementById('grading_period');
+        var gradesForm = document.getElementById('gradesForm');
+
+        if (gradingSelect && gradesForm) {
+            gradingSelect.addEventListener('change', function () {
+                // Submit WITHOUT clicking "Save Grades" (so no grades are saved, just period changes)
+                gradesForm.submit();
+            });
+        }
+    });
+</script>
+
 
 </body>
 </html>

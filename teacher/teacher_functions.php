@@ -333,4 +333,76 @@ class TeacherDB {
         }
         return $att;
     }
+
+
+    /* -----------------------------------------------------------
+   SAVE DAILY ATTENDANCE (SF2 daily marks)
+----------------------------------------------------------- */
+    public function saveDailyAttendance($student_id, $section_id, $subject_id, $teacher_id, $date, $status) {
+
+        $sql = "INSERT INTO daily_attendance 
+                    (student_id, section_id, subject_id, teacher_id, attendance_date, status)
+                VALUES 
+                    (:stud, :sec, :subj, :tid, :dt, :st)
+                ON DUPLICATE KEY UPDATE
+                    status = VALUES(status)";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(":stud", $student_id, PDO::PARAM_INT);
+        $stmt->bindParam(":sec",  $section_id, PDO::PARAM_INT);
+        $stmt->bindParam(":subj", $subject_id, PDO::PARAM_INT);
+        $stmt->bindParam(":tid",  $teacher_id, PDO::PARAM_INT);
+        $stmt->bindParam(":dt",   $date);
+        $stmt->bindParam(":st",   $status);
+
+        return $stmt->execute();
+    }
+
+        /* -----------------------------------------------------------
+    GET DAILY ATTENDANCE FOR SF2 GRID (full daily history)
+    ----------------------------------------------------------- */
+    public function getDailyAttendance($section_id, $subject_id, $year, $month) {
+
+        $sql = "SELECT student_id, attendance_date, status
+                FROM daily_attendance
+                WHERE section_id = :sec
+                AND subject_id = :subj
+                AND YEAR(attendance_date) = :yr
+                AND MONTH(attendance_date) = :mn";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(":sec",  $section_id, PDO::PARAM_INT);
+        $stmt->bindParam(":subj", $subject_id, PDO::PARAM_INT);
+        $stmt->bindParam(":yr",   $year, PDO::PARAM_INT);
+        $stmt->bindParam(":mn",   $month, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+        /* -----------------------------------------------------------
+    SAVE MONTHLY SUMMARY (auto-computed from daily attendance)
+    ----------------------------------------------------------- */
+    public function saveMonthlySummary($student_id, $section_id, $subject_id, $teacher_id, $year, $month, $presentCount) {
+
+        $sql = "INSERT INTO monthly_attendance_summary
+                    (student_id, section_id, subject_id, teacher_id, attendance_year, attendance_month, days_present_count)
+                VALUES 
+                    (:stud, :sec, :subj, :tid, :yr, :mn, :pc)
+                ON DUPLICATE KEY UPDATE
+                    days_present_count = VALUES(days_present_count)";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(":stud", $student_id, PDO::PARAM_INT);
+        $stmt->bindParam(":sec",  $section_id, PDO::PARAM_INT);
+        $stmt->bindParam(":subj", $subject_id, PDO::PARAM_INT);
+        $stmt->bindParam(":tid",  $teacher_id, PDO::PARAM_INT);
+        $stmt->bindParam(":yr",   $year, PDO::PARAM_INT);
+        $stmt->bindParam(":mn",   $month, PDO::PARAM_INT);
+        $stmt->bindParam(":pc",   $presentCount, PDO::PARAM_INT);
+
+        return $stmt->execute();
+    }
+
+
 }
