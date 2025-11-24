@@ -115,7 +115,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);  // Get current page
 
         /* Sidebar settings button */
         .update-password-btn {
-            background: #28a745;
+            background: #28a745; /* Green button */
             color: #fff;
             padding: 8px 14px;
             border: none;
@@ -123,7 +123,6 @@ $currentPage = basename($_SERVER['PHP_SELF']);  // Get current page
             cursor: pointer;
             margin-top: 20px;
             font-weight: bold;
-            width: 100%;
         }
 
         .update-password-btn:hover {
