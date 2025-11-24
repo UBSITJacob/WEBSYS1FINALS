@@ -129,3 +129,60 @@ table th, table td {
     background: #f8d7da;
     color: #721c24;
 }
+
+/* --- SF2 TABLE FIXES --- */
+
+.sf2-wrapper {
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 10px;
+    border: 1px solid #ccc;
+}
+
+table.sf2 {
+    border-collapse: collapse;
+    min-width: 1600px; /* ensures proper spacing */
+}
+
+table.sf2 th,
+table.sf2 td {
+    border: 1px solid #999;
+    padding: 4px;
+    font-size: 12px;
+    text-align: center;
+    min-width: 35px; /* consistent cell width */
+}
+
+table.sf2 th:nth-child(1),
+table.sf2 td:nth-child(1),
+table.sf2 th:nth-child(2),
+table.sf2 td:nth-child(2) {
+    position: sticky;
+    left: 0;
+    background: #fff;
+    z-index: 10;
+}
+
+table.sf2 th:nth-child(2),
+table.sf2 td:nth-child(2) {
+    left: 35px;
+}
+
+.sf2-header-day {
+    background: #007bff;
+    color: white;
+    font-weight: bold;
+}
+
+.att-cell select {
+    width: 40px;
+    font-size: 11px;
+    padding: 0;
+    margin: 0;
+}
+
+/* Fix P/A/T total columns */
+.sf2-total {
+    font-weight: bold;
+    background: #f0f0f0;
+}
