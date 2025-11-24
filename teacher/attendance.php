@@ -19,16 +19,16 @@ if ($teacher_id === 0) {
 $loads = $teacherdb->getTeacherLoads($teacher_id);
 
 $message = "";
-$message_status = ""; // New variable to hold 'ok' or 'err'
+$message_status = "";
 
-// defaults
+// --- DEFAULTS / CONTEXT ---
 $selected_section_id    = "";
 $selected_subject_id    = "";
 $selected_year          = date('Y');
 $selected_month         = date('n'); // 1–12
-$selected_academic_year = "2024-2025"; // optional if you want to display
+$selected_academic_year = "2024-2025"; // Default system AY
 
-// handle save attendance
+// --- 1. HANDLE SAVE ATTENDANCE (POST) ---
 if (isset($_POST['save_attendance'])) {
     $section_id = trim($_POST['section_id']);
     $subject_id = trim($_POST['subject_id']);
@@ -45,12 +45,13 @@ if (isset($_POST['save_attendance'])) {
             $ok_count = 0;
             foreach ($_POST['days_present'] as $student_id => $days_present) {
                 $days_present = trim($days_present);
-                if ($days_present === "") {
-                    continue;
+                if ($days_present === "") continue;
+                if (!is_numeric($days_present) || (int)$days_present < 0 || (int)$days_present > 31) {
+                     $message = "⚠️ Invalid attendance value submitted for a student.";
+                     $message_status = "err";
+                     continue;
                 }
-                if (!is_numeric($days_present)) {
-                    continue;
-                }
+                
                 $saved = $teacherdb->saveAttendance(
                     (int)$student_id,
                     (int)$section_id,
@@ -64,10 +65,10 @@ if (isset($_POST['save_attendance'])) {
                     $ok_count++;
                 }
             }
-            if ($ok_count > 0) {
+            if ($ok_count > 0 && $message_status !== "err") {
                 $message = "✅ Saved attendance for {$ok_count} student(s).";
                 $message_status = "ok";
-            } else {
+            } elseif ($message_status !== "err") {
                 $message = "⚠️ No valid attendance values were submitted.";
                 $message_status = "err";
             }
@@ -81,7 +82,7 @@ if (isset($_POST['save_attendance'])) {
     }
 }
 
-// handle loading of students + existing attendance
+// --- 2. HANDLE LOAD (GET) ---
 if (isset($_GET['section_id'])) {
     $selected_section_id = $_GET['section_id'];
 }
@@ -95,13 +96,26 @@ if (isset($_GET['attendance_month'])) {
     $selected_month = (int)$_GET['attendance_month'];
 }
 
-// load students for the selected section/year (reuse academic year if needed)
+// --- 3. DATA LOADING ---
 $students_in_section = [];
 $existing_attendance = [];
+$class_info = []; // To store the display names
 
 if ($selected_section_id !== "") {
-    // we can still use academic year filter if you want; for now using default AY
+    // We assume students are enrolled in the default Academic Year
     $students_in_section = $teacherdb->getSectionStudents((int)$selected_section_id, $selected_academic_year);
+    
+    // Determine the section and subject names for display
+    foreach ($loads as $load) {
+        if ($load['section_id'] == $selected_section_id) {
+            // Get section info from any load linked to this section
+            $class_info['section_label'] = $load['section_name'] . " (G" . $load['grade_level'] . $load['section_letter'] . ")";
+        }
+        if ($load['subject_id'] == $selected_subject_id && $load['section_id'] == $selected_section_id) {
+            // Get subject name from the exact load match
+            $class_info['subject_label'] = $load['subject_name'];
+        }
+    }
 }
 
 // load existing attendance to prefill
@@ -149,12 +163,12 @@ if ($selected_section_id !== "" && $selected_subject_id !== "" && $selected_year
                             if (in_array($load['section_id'], $shown_sections)) continue;
                             $shown_sections[] = $load['section_id'];
                         ?>
-                            <option value="<?php echo $load['section_id']; ?>"
+                            <option value="<?php echo htmlspecialchars($load['section_id']); ?>"
                                 <?php if ($selected_section_id == $load['section_id']) echo 'selected'; ?>>
                                 <?php
                                     echo htmlspecialchars(
                                         $load['section_name'] .
-                                        " (Grade " . $load['grade_level'] . $load['section_letter'] . ")"
+                                        " (G" . $load['grade_level'] . $load['section_letter'] . ")"
                                     );
                                 ?>
                             </option>
@@ -168,9 +182,17 @@ if ($selected_section_id !== "" && $selected_subject_id !== "" && $selected_year
                 <select name="subject_id" id="subject_id" required>
                     <option value="">-- Select Subject --</option>
                     <?php if ($loads): ?>
-                        <?php foreach ($loads as $load): ?>
-                            <?php if ($selected_section_id !== "" && $load['section_id'] != $selected_section_id) continue; ?>
-                            <option value="<?php echo $load['subject_id']; ?>"
+                        <?php 
+                        $shown_subjects = [];
+                        foreach ($loads as $load):
+                            // Filter subjects if a section is selected, or list all subjects if none is selected
+                            if ($selected_section_id !== "" && $load['section_id'] != $selected_section_id) continue;
+                            
+                            // Prevent subject duplication in the list
+                            if (in_array($load['subject_id'], $shown_subjects)) continue;
+                            $shown_subjects[] = $load['subject_id'];
+                        ?>
+                            <option value="<?php echo htmlspecialchars($load['subject_id']); ?>"
                                 <?php if ($selected_subject_id == $load['subject_id']) echo 'selected'; ?>>
                                 <?php echo htmlspecialchars($load['subject_name']); ?>
                             </option>
@@ -202,36 +224,13 @@ if ($selected_section_id !== "" && $selected_subject_id !== "" && $selected_year
             <p>
                 Section:
                 <strong>
-                    <?php
-                    $section_label = "";
-                    if ($loads) {
-                        foreach ($loads as $load) {
-                            if ($load['section_id'] == $selected_section_id) {
-                                $section_label = $load['section_name'] . " (Grade " .
-                                                 $load['grade_level'] . $load['section_letter'] . ")";
-                                break;
-                            }
-                        }
-                    }
-                    echo htmlspecialchars($section_label);
-                    ?>
+                    <?php echo htmlspecialchars($class_info['section_label'] ?? 'N/A'); ?>
                 </strong><br>
                 Subject:
                 <strong>
-                    <?php
-                    $subject_label = "";
-                    if ($loads) {
-                        foreach ($loads as $load) {
-                            if ($load['subject_id'] == $selected_subject_id) {
-                                $subject_label = $load['subject_name'];
-                                break;
-                            }
-                        }
-                    }
-                    echo htmlspecialchars($subject_label);
-                    ?>
+                    <?php echo htmlspecialchars($class_info['subject_label'] ?? 'N/A'); ?>
                 </strong><br>
-                Month: <strong><?php echo htmlspecialchars($selected_year . '-' . $selected_month); ?></strong>
+                Month: <strong><?php echo htmlspecialchars(date('F', mktime(0, 0, 0, $selected_month, 1)) . ' ' . $selected_year); ?></strong>
             </p>
 
             <form method="post" action="attendance.php">
@@ -241,12 +240,12 @@ if ($selected_section_id !== "" && $selected_subject_id !== "" && $selected_year
                 <input type="hidden" name="attendance_month" value="<?php echo htmlspecialchars($selected_month); ?>">
 
                 <table>
-                    <thead style="background:#007bff; color:white;">
+                    <thead>
                         <tr>
                             <th>Student ID</th>
                             <th>School ID</th>
                             <th>Full Name</th>
-                            <th>Days Present</th>
+                            <th>Days Present (0-31)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -277,7 +276,7 @@ if ($selected_section_id !== "" && $selected_subject_id !== "" && $selected_year
     <?php elseif ($selected_section_id !== "" && $selected_subject_id !== ""): ?>
         <div class="card">
             <h3>Enter Attendance</h3>
-            <p>No students found for this section.</p>
+            <p>No students found for this section (AY <?php echo htmlspecialchars($selected_academic_year); ?>). Please check enrollment data.</p>
         </div>
     <?php endif; ?>
 

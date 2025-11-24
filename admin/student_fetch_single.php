@@ -24,7 +24,7 @@ try {
         $stmt = $conn->prepare("
             SELECT sd.user_id AS id, sd.lrn AS lrn, sd.school_id AS schoolId,
                    sd.grade_level AS gradeLevel, sd.gender, sd.contact_no AS contactNo,
-                   sd.status, u.fullname, u.email, u.username
+                   sd.status, u.fullname, u.email, u.username /* <--- USERNAME ADDED/CONFIRMED */
             FROM student_details sd
             LEFT JOIN users u ON u.id = sd.user_id
             WHERE sd.user_id = ?
@@ -35,7 +35,7 @@ try {
         $stmt = $conn->prepare("
             SELECT sd.user_id AS id, sd.lrn AS lrn, sd.school_id AS schoolId,
                    sd.grade_level AS gradeLevel, sd.gender, sd.contact_no AS contactNo,
-                   sd.status, u.fullname, u.email, u.username
+                   sd.status, u.fullname, u.email, u.username /* <<< USERNAME ADDED/CONFIRMED */
             FROM student_details sd
             LEFT JOIN users u ON u.id = sd.user_id
             WHERE sd.school_id = ?
@@ -50,12 +50,12 @@ try {
     if ($res && $res->num_rows === 1) {
         $student = $res->fetch_assoc();
 
-        // Fix null fields → empty string
+        // Fix null fields -> empty string
         foreach (['schoolId','fullname','email','gender','contactNo','lrn','status','username'] as $k) {
             $student[$k] = $student[$k] ?? '';
         }
 
-        // gradeLevel stays null or int
+        // gradeLevel conversion
         $student['gradeLevel'] = $student['gradeLevel'] !== null ? (int)$student['gradeLevel'] : null;
 
         echo json_encode([
