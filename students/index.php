@@ -109,6 +109,22 @@ if ($hour < 12) {
             font-weight: bold;
         }
 
+        /* Sidebar settings button */
+        .update-password-btn {
+            background: #28a745; /* Green button */
+            color: #fff;
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        .update-password-btn:hover {
+            background: #218838; /* Darker green when hovered */
+        }
+
         /* Header styles */
         .header {
             position: fixed;
@@ -238,6 +254,8 @@ if ($hour < 12) {
     <div class="profile-section">
         <img src="https://cdn-icons-png.flaticon.com/512/3870/3870822.png" alt="Profile pic">
         <p><?= htmlspecialchars($profile['fullname']) ?></p>
+        <!-- Settings button below the profile picture -->
+        <button class="update-password-btn" id="openSettings">Settings</button>
     </div>
 
     <ul>
@@ -245,8 +263,11 @@ if ($hour < 12) {
         <li><a href="profile.php">Profile</a></li>
         <li><a href="grades.php">Grades</a></li>
         <li><a href="enrollment.php">Enrollment</a></li>
+        <!-- Removed the Settings link from the sidebar menu -->
     </ul>
 </div>
+
+
 
 <!-- HEADER -->
 <div class="header" id="header">
@@ -289,6 +310,11 @@ document.getElementById("toggleSidebar").onclick = () => {
     document.getElementById("sidebar").classList.toggle("hidden");
     document.getElementById("header").classList.toggle("sidebar-hidden");
     document.getElementById("mainContent").classList.toggle("sidebar-hidden");
+};
+
+// Settings button click event
+document.getElementById("openSettings").onclick = () => {
+    window.location.href = "settings.php"; // Redirect to settings page
 };
 </script>
 
