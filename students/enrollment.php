@@ -9,6 +9,7 @@ if (!isset($_SESSION['student'])) {
 
 $student_id = $_SESSION['student']['id'];
 $student = new Student($student_id);
+// $enrollments now correctly fetches subjects linked to the section
 $enrollments = $student->getEnrollment() ?: [];
 ?>
 
@@ -32,7 +33,7 @@ body { margin:0; font-family: 'Segoe UI', sans-serif; background-color: #f4f4f4;
 .main-content { margin-left:230px; padding:25px; min-height:calc(100vh - 60px); transition:0.3s; }
 .card { background:#fff; padding:20px; border-radius:10px; box-shadow:0 3px 10px rgba(0,0,0,0.1); text-align:left; margin-bottom:20px; }
 .card table { width:100%; }
-.card table th, .card table td { text-align:left; padding:8px; width:50%; }
+.card table th, .card table td { text-align:left; padding:8px; width:auto; } /* Adjusted width */
 #toggleSidebar { background:#007bff; border:none; color:#fff; padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold; }
 </style>
 </head>
@@ -61,15 +62,14 @@ body { margin:0; font-family: 'Segoe UI', sans-serif; background-color: #f4f4f4;
 
 <div class="main-content" id="mainContent">
     <div class="card">
-        <h3>Your Subjects</h3>
+        <h3>Your Subjects (Current Load)</h3>
         <?php if (!empty($enrollments)): ?>
         <table class="table table-bordered table-striped">
-            <tr><th>Subject</th><th>Description</th><th>Enrolled On</th></tr>
+            <tr><th>Subject Name</th><th>Subject Code</th></tr> 
             <?php foreach ($enrollments as $e): ?>
             <tr>
-                <td><?= htmlspecialchars($e['course_name'] ?? 'N/A') ?></td>
-                <td><?= htmlspecialchars($e['description'] ?? 'N/A') ?></td>
-                <td><?= htmlspecialchars($e['enrolled_on'] ?? 'N/A') ?></td>
+                <td><?= htmlspecialchars($e['subject_name'] ?? 'N/A') ?></td>
+                <td><?= htmlspecialchars($e['subject_code'] ?? 'N/A') ?></td>
             </tr>
             <?php endforeach; ?>
         </table>

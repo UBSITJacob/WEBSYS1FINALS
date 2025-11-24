@@ -20,14 +20,8 @@ if (!$profile) {
         'section' => 'N/A',
         'grade_level' => 'N/A',
         'birthday' => 'N/A',
-        'birthplace' => 'N/A',
-        'religion' => 'N/A',
         'gender' => 'N/A',
-        'mother_tongue' => 'N/A',
-        'nationality' => 'N/A',
         'mobile' => 'N/A',
-        'current_address' => 'N/A',
-        'permanent_address' => 'N/A',
     ];
 }
 
@@ -84,7 +78,6 @@ body { margin:0; font-family: 'Segoe UI', sans-serif; background-color: #f4f4f4;
 
 <div class="main-content" id="mainContent">
 
-    <!-- Basic Info Card -->
     <div class="card">
         <h4>Basic Info</h4>
         <table class="table table-bordered">
@@ -93,31 +86,23 @@ body { margin:0; font-family: 'Segoe UI', sans-serif; background-color: #f4f4f4;
             <tr><th>Email</th><td><?= htmlspecialchars($profile['email']) ?></td></tr>
             <tr><th>Section</th><td><?= htmlspecialchars($profile['section']) ?></td></tr>
             <tr><th>Grade Level</th><td><?= htmlspecialchars($profile['grade_level']) ?></td></tr>
-            <tr><th>Total Subject</th><td><?= $totalCourses ?></td></tr>
+            <tr><th>Total Subjects</th><td><?= $totalCourses ?></td></tr>
         </table>
     </div>
 
-    <!-- Personal Info Card -->
     <div class="card">
         <h4>Personal Information</h4>
         <table class="table table-bordered">
             <tr><th>Birthday</th><td><?= htmlspecialchars($profile['birthday']) ?></td></tr>
-            <tr><th>Birthplace</th><td><?= htmlspecialchars($profile['birthplace']) ?></td></tr>
-            <tr><th>Religion</th><td><?= htmlspecialchars($profile['religion']) ?></td></tr>
             <tr><th>Gender</th><td><?= htmlspecialchars($profile['gender']) ?></td></tr>
-            <tr><th>Mother Tongue</th><td><?= htmlspecialchars($profile['mother_tongue']) ?></td></tr>
-            <tr><th>Nationality</th><td><?= htmlspecialchars($profile['nationality']) ?></td></tr>
         </table>
     </div>
 
-    <!-- Contact Info Card -->
     <div class="card">
         <h4>Contact Information</h4>
         <table class="table table-bordered">
             <tr><th>Mobile Number</th><td><?= htmlspecialchars($profile['mobile']) ?></td></tr>
             <tr><th>E-mail Address</th><td><?= htmlspecialchars($profile['email']) ?></td></tr>
-            <tr><th>Current Address</th><td><?= htmlspecialchars($profile['current_address']) ?></td></tr>
-            <tr><th>Permanent Address</th><td><?= htmlspecialchars($profile['permanent_address']) ?></td></tr>
         </table>
     </div>
 

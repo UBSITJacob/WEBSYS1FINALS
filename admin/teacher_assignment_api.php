@@ -2,30 +2,40 @@
 require_once "../includes/oop_functions.php";
 header('Content-Type: application/json; charset=utf-8');
 
+// The Database class (Database) is expected to be defined in oop_functions.php
 $db = new Database();
-$conn = $db->getConnection();
+// NOTE: $conn uses mysqli for fetch_all, as shown by your code.
+$conn = $db->getConnection(); 
 
 $action = $_REQUEST['action'] ?? '';
 
 try {
     switch ($action) {
+        
+        // =========================================================
+        // READ ALL POSSIBLE ASSIGNMENTS (Filtered by Grade Level)
+        // =========================================================
         case 'get_all_assignments':
-            // Fetch all sections and subjects (for the dropdown list)
+            // Enforces s.grade_level = sub.grade_level to list only valid pairings.
             $sql = "
                 SELECT 
                     s.id AS section_id, s.grade_level, s.section_letter, s.section_name,
                     sub.id AS subject_id, sub.subject_code, sub.subject_name
                 FROM section s
-                CROSS JOIN subject sub
-                ORDER BY s.grade_level, s.section_name, sub.subject_name;
+                JOIN subject sub ON s.grade_level = sub.grade_level
+                ORDER BY s.grade_level, s.section_name, sub.subject_name
             ";
+            
+            // Execute using query for simplicity since no user input is involved
             $result = $conn->query($sql);
             $assignments = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
             echo json_encode(['status' => 'success', 'assignments' => $assignments]);
             break;
 
+        // =========================================================
+        // READ CURRENT TEACHER LOADS
+        // =========================================================
         case 'get_teacher_loads':
-            // Fetch loads for a specific teacher
             $teacher_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
             if ($teacher_id <= 0) throw new Exception("Missing teacher ID.");
 
@@ -49,8 +59,10 @@ try {
             echo json_encode(['status' => 'success', 'loads' => $loads]);
             break;
 
+        // =========================================================
+        // CREATE ASSIGNMENT
+        // =========================================================
         case 'add_assignment':
-            // Add a new assignment (Create)
             $teacher_id = isset($_POST['teacher_id']) ? intval($_POST['teacher_id']) : 0;
             $section_id = isset($_POST['section_id']) ? intval($_POST['section_id']) : 0;
             $subject_id = isset($_POST['subject_id']) ? intval($_POST['subject_id']) : 0;
@@ -68,7 +80,7 @@ try {
             if ($stmt->execute()) {
                 echo json_encode(['status' => 'success', 'message' => 'Assignment added successfully.']);
             } else {
-                // Check for duplicate key error (Teacher already assigned this specific load)
+                // Check for duplicate key error (MySQL error code 1062)
                 if ($conn->errno == 1062) {
                     throw new Exception("This teacher is already assigned to this class and subject.");
                 }
@@ -77,8 +89,10 @@ try {
             $stmt->close();
             break;
 
+        // =========================================================
+        // DELETE ASSIGNMENT
+        // =========================================================
         case 'delete_assignment':
-            // Delete an assignment (Delete)
             $load_id = isset($_POST['load_id']) ? intval($_POST['load_id']) : 0;
             if ($load_id <= 0) throw new Exception("Missing load ID.");
             
@@ -102,4 +116,3 @@ try {
 } finally {
     $conn->close();
 }
-?>

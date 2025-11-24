@@ -78,7 +78,7 @@ body { margin:0; font-family: 'Segoe UI', sans-serif; background-color: #f4f4f4;
 
     <div class="dashboard-cards">
         <div class="card">
-            <h3>Total Subject</h3>
+            <h3>Total Subjects</h3>
             <div class="count"><?= $totalCourses ?></div>
         </div>
         <div class="card">
