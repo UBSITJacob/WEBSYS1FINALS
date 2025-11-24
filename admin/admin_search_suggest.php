@@ -9,15 +9,15 @@ if (!isset($_GET['q']) || trim($_GET['q']) === '') {
 
 $q = trim($_GET['q']);
 $db = new Database();
-$conn = $db->getConnection();
+$conn = $db->conn;
 
 try {
     $like = '%' . $q . '%';
     $stmt = $conn->prepare("
-        SELECT sd.school_id AS SchoolID, sd.lrn AS LRN, COALESCE(u.fullname,'') AS Fullname, COALESCE(u.email,'') AS Email
-        FROM student_details sd
-        LEFT JOIN users u ON u.id = sd.user_id
-        WHERE u.fullname LIKE ? OR sd.school_id LIKE ? OR u.email LIKE ? OR sd.lrn LIKE ?
+        SELECT ad.admin_id AS AdminID, COALESCE(u.fullname,'') AS Fullname, COALESCE(u.email,'') AS Email, COALESCE(u.username,'') AS Username
+        FROM admin_details ad
+        LEFT JOIN users u ON u.id = ad.user_id
+        WHERE u.fullname LIKE ? OR ad.admin_id LIKE ? OR u.email LIKE ? OR u.username LIKE ?
         ORDER BY u.fullname ASC
         LIMIT 8
     ");
@@ -31,10 +31,10 @@ try {
     }
 
     echo json_encode($suggestions);
-
     $stmt->close();
-} catch (Exception $e) {
+} catch (Throwable $e) {
     echo json_encode([]);
 } finally {
     $conn->close();
 }
+?>

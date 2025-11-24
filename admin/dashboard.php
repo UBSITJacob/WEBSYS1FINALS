@@ -24,27 +24,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['logout'])) {
 }
 
 // ---- Dashboard Counts ----
-// student_details table
-$totalStudents = 0;
-$res = $conn->query("SELECT COUNT(*) AS total FROM student_details");
-if ($res) {
-    $totalStudents = intval($res->fetch_assoc()['total'] ?? 0);
-}
+$totalStudents = $conn->query("SELECT COUNT(*) AS total FROM student_details")->fetch_assoc()['total'] ?? 0;
+$totalTeachers = $conn->query("SELECT COUNT(*) AS total FROM teacher_details")->fetch_assoc()['total'] ?? 0;
 
-// teacher_details table
-$totalTeachers = 0;
-$res = $conn->query("SELECT COUNT(*) AS total FROM teacher_details");
-if ($res) {
-    $totalTeachers = intval($res->fetch_assoc()['total'] ?? 0);
-}
-
-// users table -> count admin users
-$totalAdmins = 0;
-$res = $conn->prepare("SELECT COUNT(*) AS total FROM users WHERE user_type = 'Admin'");
-$res->execute();
-$r = $res->get_result();
-if ($r) $totalAdmins = intval($r->fetch_assoc()['total'] ?? 0);
-$res->close();
+$stmt = $conn->prepare("SELECT COUNT(*) AS total FROM users WHERE user_type = 'Admin'");
+$stmt->execute();
+$totalAdmins = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
+$stmt->close();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -53,48 +39,189 @@ $res->close();
 <title>Admin Dashboard | Evelio AMS</title>
 <link rel="stylesheet" href="css/admin_styles.css">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <style>
-/* (same styles as your latest dashboard — kept concise here) */
-body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #f4f4f4; }
-.sidebar { background-color: #1a1a1a; color: white; width: 230px; height: 100vh; position: fixed; top: 0; left: 0; padding: 20px; transition: transform 0.3s ease; }
-.sidebar.hidden { transform: translateX(-230px); }
+/* GLOBAL */
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #f4f4f4;
+}
+
+/* SIDEBAR */
+.sidebar {
+    background: #1a1a1a;
+    color: white;
+    width: 230px;
+    height: 100vh;               /* Always full height */
+    position: fixed;
+    top: 0;
+    left: 0;
+    padding: 20px;
+    overflow-y: scroll;          /* Always scrollable */
+    overflow-x: hidden;
+    scroll-behavior: smooth;     /* Smooth scrolling */
+    transition: transform 0.3s ease;
+}
+
+/* Sidebar hidden (toggle) */
+.sidebar.hidden { 
+    transform: translateX(-230px); 
+}
+
+/* Custom Scrollbar */
+.sidebar::-webkit-scrollbar { width: 8px; }
+.sidebar::-webkit-scrollbar-track { background: #1a1a1a; }
+.sidebar::-webkit-scrollbar-thumb {
+    background: #444; 
+    border-radius: 3px;
+}
+.sidebar::-webkit-scrollbar-thumb:hover { background: #666; }
+
+
+/* Sidebar profile center */
+.profile-section {
+    text-align: center;
+    margin-bottom: 20px;
+}
+.profile-section img {
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block; margin: auto;
+}
+.profile-section p {
+    margin: 10px 0 5px;
+    font-weight: bold;
+    color: #fff;
+}
+.update-password-btn {
+    background: #28a745;
+    color: #fff;
+    padding: 8px 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+/* Sidebar links */
 .sidebar ul { list-style: none; padding: 0; }
-.sidebar ul li { margin: 15px 0; position: relative; }
-.sidebar ul li a { text-decoration: none; color: #ccc; font-weight: 600; display: block; padding: 8px 10px; border-radius: 5px; cursor:pointer; }
-.sidebar ul li a:hover, .sidebar ul li a.active { background-color: #007bff; color: #fff; }
-.dropdown-content { display: none; flex-direction: column; margin-left: 15px; }
-.dropdown-content a { font-size: 14px; background-color: #2a2a2a; padding: 6px 10px; border-radius: 4px; }
-.dropdown-content a:hover { background-color: #007bff; }
+.sidebar ul li { margin: 15px 0; }
+.sidebar ul li a {
+    color: #ccc;
+    text-decoration: none;
+    display: block;
+    padding: 8px 10px;
+    border-radius: 5px;
+    font-weight: 600;
+}
+.sidebar ul li a:hover,
+.sidebar ul li a.active {
+    background: #007bff;
+    color: #fff;
+}
+
+/* Dropdown */
+.dropdown-content {
+    display: none;
+    flex-direction: column;
+    margin-left: 15px;
+}
 .dropdown.open .dropdown-content { display: flex; }
-.profile-section { text-align: center; margin-bottom: 20px; }
-.profile-section img { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; display: block; margin: 0 auto; }
-.profile-section p { margin: 10px 0 5px; font-weight: bold; font-size: 16px; color: #fff; }
-.update-password-btn { background-color: #28a745; color: #fff; padding: 8px 14px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; }
-.update-password-btn:hover { background-color: #218838; }
-.header { margin-left: 230px; background: #e9ecef; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ccc; transition: margin-left 0.3s ease; }
-.header.sidebar-hidden { margin-left: 0; }
-.header .title { font-size: 20px; font-weight: 700; color: #333; }
-.header .controls { display: flex; gap: 10px; align-items: center; }
-.header button { background: #007bff; border: none; color: #fff; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+.dropdown-content a {
+    background: #2a2a2a;
+    padding: 6px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+/* HEADER (FIXED & ALIGNED) */
+.header {
+    position: fixed;
+    top: 0;
+    left: 230px;
+    right: 0;
+    height: 60px;
+    background: #e9ecef;
+    border-bottom: 1px solid #ccc;
+
+    display: flex;
+    justify-content: space-between; /* Title left + controls right */
+    align-items: center;
+
+    padding: 0 20px;
+    z-index: 999;
+    transition: left 0.3s ease;
+}
+
+.header.sidebar-hidden { left: 0; }
+
+.header .title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+}
+
+.controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.header button {
+    background: #007bff;
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
 .header button:hover { background: #0056b3; }
-.logout-btn { background-color: #dc3545 !important; }
-.logout-btn:hover { background-color: #c82333 !important; }
-.main-content { margin-left: 230px; padding: 25px; transition: margin-left 0.3s ease; min-height: calc(100vh - 60px); }
-.main-content.sidebar-hidden { margin-left: 0; }
-.dashboard-cards { display: flex; gap: 20px; margin-top: 20px; flex-wrap: wrap; }
-.card { flex: 1; background: #fff; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 3px 10px rgba(0,0,0,0.1); min-width: 250px; }
-.card h3 { color: #333; }
-.card .count { font-size: 2rem; font-weight: bold; margin-top: 10px; color: #007bff; }
+
+.logout-btn {
+    background: #dc3545 !important;
+}
+.logout-btn:hover { background: #c82333 !important; }
+
+/* MAIN CONTENT */
+.main-content {
+    margin-left: 230px;
+    padding: 90px 25px 25px;
+    transition: margin-left 0.3s ease;
+}
+.main-content.sidebar-hidden { margin-left: 0 !important; }
+
+.dashboard-cards {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+.card {
+    background: #fff;
+    padding: 20px;
+    min-width: 250px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+.card .count {
+    font-size: 2rem;
+    color: #007bff;
+    font-weight: bold;
+}
 </style>
 </head>
+
 <body>
 
+<!-- SIDEBAR -->
 <div class="sidebar" id="sidebar">
+
     <div class="profile-section">
-        <img src="<?= htmlspecialchars($admin['profile_pic'] ?? 'img/default.jpg'); ?>" alt="Profile Picture">
+        <img src="<?= htmlspecialchars($admin['profile_pic'] ?? 'img/default.jpg'); ?>">
         <p><?= htmlspecialchars($admin['fullname'] ?? 'Administrator'); ?></p>
 
-        <!-- Settings button loads settings.php dynamically -->
         <button class="update-password-btn" id="openSettings">Settings</button>
     </div>
 
@@ -109,11 +236,7 @@ body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #f4f4f4
             </div>
         </li>
 
-        <!-- 🔑 NEW: Manage Sections link -->
-        <li>
-            <a class="nav-link" data-page="manage_sections.php">Manage Sections</a>
-        </li>
-        <!-- END NEW LINK -->
+        <li><a class="nav-link" data-page="manage_sections.php">Manage Sections</a></li>
 
         <li class="dropdown">
             <a class="dropdown-toggle">Manage Teachers ▼</a>
@@ -123,25 +246,35 @@ body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #f4f4f4
             </div>
         </li>
 
-        <li>
-            <a class="nav-link" data-page="manage_roles.php">Manage Roles</a>
+        <li class="dropdown">
+            <a class="dropdown-toggle">Manage Roles ▼</a>
+            <div class="dropdown-content">
+                <a class="nav-link" data-page="add_admin_interface.php">Add Admin</a>
+                <a class="nav-link" data-page="manage_admins.php">Manage Admin</a>
+            </div>
         </li>
     </ul>
+
 </div>
 
+<!-- HEADER -->
 <div class="header" id="header">
     <div class="title">Evelio AMS - Admin Dashboard</div>
+
     <div class="controls">
         <button id="toggleSidebar">☰</button>
         <button id="toggleFullscreen">⛶</button>
+
         <form method="POST" id="logoutForm" style="display:inline;">
             <button type="submit" name="logout" class="logout-btn">Sign Out</button>
         </form>
     </div>
 </div>
 
+<!-- MAIN CONTENT -->
 <div class="main-content" id="mainContent">
     <h2>Overview</h2>
+
     <div class="dashboard-cards">
         <div class="card"><h3>Total Students</h3><div class="count"><?= $totalStudents ?></div></div>
         <div class="card"><h3>Total Teachers</h3><div class="count"><?= $totalTeachers ?></div></div>
@@ -150,49 +283,35 @@ body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #f4f4f4
 </div>
 
 <script>
-const sidebar = document.getElementById('sidebar');
-const header = document.getElementById('header');
-const mainContent = document.getElementById('mainContent');
-
-document.getElementById('toggleSidebar').onclick = () => {
-    sidebar.classList.toggle('hidden');
-    header.classList.toggle('sidebar-hidden');
-    mainContent.classList.toggle('sidebar-hidden');
+// Sidebar toggle
+document.getElementById("toggleSidebar").onclick = () => {
+    document.getElementById("sidebar").classList.toggle("hidden");
+    document.getElementById("header").classList.toggle("sidebar-hidden");
+    document.getElementById("mainContent").classList.toggle("sidebar-hidden");
 };
 
-const fullscreenBtn = document.getElementById('toggleFullscreen');
-fullscreenBtn.onclick = () => {
+// Fullscreen toggle
+document.getElementById("toggleFullscreen").onclick = () => {
     if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen();
-        fullscreenBtn.textContent = '⏹';
+        toggleFullscreen.textContent = "⏹";
     } else {
         document.exitFullscreen();
-        fullscreenBtn.textContent = '⛶';
+        toggleFullscreen.textContent = "⛶";
     }
 };
 
-// Dropdown menus
-document.querySelectorAll('.dropdown-toggle').forEach(el =>
-    el.addEventListener('click', () => el.parentElement.classList.toggle('open'))
-);
+// Dropdown toggles
+document.querySelectorAll('.dropdown-toggle').forEach(btn => {
+    btn.addEventListener("click", () =>
+        btn.parentElement.classList.toggle("open")
+    );
+});
 
-// ACTIVE LINK SETTER
-function setActiveLink(page) {
-    document.querySelectorAll('.nav-link').forEach(a => {
-        a.classList.remove('active');
-        if (a.dataset.page === page) {
-            a.classList.add('active');
-
-            const parentDropdown = a.closest('.dropdown');
-            if (parentDropdown) parentDropdown.classList.add('open');
-        }
-    });
-}
-
-// PAGE LOADER
+// Load pages dynamically
 function loadPage(page) {
-    if (!page || page === 'dashboard') {
-        localStorage.removeItem('currentPage');
+    if (!page || page === "dashboard") {
+        localStorage.removeItem("currentPage");
         location.reload();
         return;
     }
@@ -201,51 +320,59 @@ function loadPage(page) {
         .then(r => r.text())
         .then(html => {
             mainContent.innerHTML = html;
-            localStorage.setItem('currentPage', page);
+            localStorage.setItem("currentPage", page);
             setActiveLink(page);
 
-            // execute inline scripts from loaded page
-            const temp = document.createElement('div');
+            // Execute inline scripts from dynamic page
+            const temp = document.createElement("div");
             temp.innerHTML = html;
-            temp.querySelectorAll('script').forEach(oldScript => {
-                const newScript = document.createElement('script');
+            temp.querySelectorAll("script").forEach(oldScript => {
+                const newScript = document.createElement("script");
                 if (oldScript.src) newScript.src = oldScript.src;
                 else newScript.textContent = oldScript.textContent;
                 document.body.appendChild(newScript);
             });
-        })
-        .catch(err =>
-            Swal.fire('Error', 'Unable to load page: ' + err.message, 'error')
-        );
+        });
 }
 
-// NAV LINKS
-document.querySelectorAll('.nav-link').forEach(link => {
-    link.addEventListener('click', e => {
+// Active nav highlighting
+function setActiveLink(page) {
+    document.querySelectorAll(".nav-link").forEach(a => {
+        a.classList.remove("active");
+        if (a.dataset.page === page) {
+            a.classList.add("active");
+
+            const dropdown = a.closest(".dropdown");
+            if (dropdown) dropdown.classList.add("open");
+        }
+    });
+}
+
+// Click nav links
+document.querySelectorAll(".nav-link").forEach(link => {
+    link.addEventListener("click", e => {
         e.preventDefault();
         loadPage(link.dataset.page);
     });
 });
 
-// SETTINGS BUTTON (TOP OF SIDEBAR)
-document.getElementById('openSettings').addEventListener('click', e => {
-    e.preventDefault();
+// Sidebar top settings button
+document.getElementById("openSettings").onclick = () =>
     loadPage("settings.php");
-});
 
-// RESTORE LAST PAGE
-window.addEventListener('DOMContentLoaded', () => {
-    const lastPage = localStorage.getItem('currentPage');
-    if (lastPage) {
-        loadPage(lastPage);
-        setActiveLink(lastPage);
+// Restore last opened page
+window.addEventListener("DOMContentLoaded", () => {
+    const last = localStorage.getItem("currentPage");
+    if (last) {
+        loadPage(last);
+        setActiveLink(last);
     }
 });
 
-// CLEAR LAST PAGE WHEN LOGGING OUT
-document.getElementById('logoutForm').addEventListener('submit', () => {
-    localStorage.removeItem('currentPage');
-});
+// Clear last page on logout
+document.getElementById("logoutForm").onsubmit = () =>
+    localStorage.removeItem("currentPage");
 </script>
+
 </body>
 </html>

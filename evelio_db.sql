@@ -3,11 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 14, 2025 at 01:53 PM
+-- Generation Time: Nov 21, 2025 at 07:31 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
-CREATE DATABASE IF NOT EXISTS evelio_db;
-USE evelio_db;
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -22,6 +20,19 @@ SET time_zone = "+00:00";
 --
 -- Database: `evelio_db`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `admin_details`
+--
+
+CREATE TABLE `admin_details` (
+  `user_id` int(11) NOT NULL,
+  `admin_id` varchar(50) NOT NULL,
+  `gender` varchar(10) DEFAULT NULL,
+  `status` enum('Active','Inactive') DEFAULT 'Active'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -85,6 +96,24 @@ CREATE TABLE `section` (
   `adviser_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `section`
+--
+
+INSERT INTO `section` (`id`, `grade_level`, `section_letter`, `strand_id`, `section_name`, `adviser_id`) VALUES
+(1, 7, 'A', NULL, '7A', NULL),
+(2, 7, 'B', NULL, '7B', NULL),
+(3, 7, 'C', NULL, '7C', NULL),
+(4, 8, 'A', NULL, '8A', NULL),
+(5, 8, 'B', NULL, '8B', NULL),
+(6, 8, 'C', NULL, '8C', NULL),
+(7, 9, 'A', NULL, '9A', NULL),
+(8, 9, 'B', NULL, '9B', NULL),
+(9, 9, 'C', NULL, '9C', NULL),
+(10, 10, 'A', NULL, '10A', NULL),
+(11, 10, 'B', NULL, '10B', NULL),
+(12, 10, 'C', NULL, '10C', NULL);
+
 -- --------------------------------------------------------
 
 --
@@ -128,7 +157,9 @@ INSERT INTO `strand` (`id`, `strand_code`, `strand_name`) VALUES
 CREATE TABLE `student_details` (
   `user_id` int(11) NOT NULL,
   `school_id` varchar(20) NOT NULL,
-  `birthdate` date DEFAULT NULL,
+  `lrn` varchar(20) NOT NULL,
+  `grade_level` int(11) DEFAULT NULL,
+  `contact_no` varchar(20) NOT NULL,
   `gender` varchar(10) DEFAULT NULL,
   `status` enum('Active','Alumni','Transferred','Dropped') DEFAULT 'Active'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -186,8 +217,21 @@ CREATE TABLE `users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
+-- Dumping data for table `users`
+--
+
+INSERT INTO `users` (`id`, `username`, `password`, `email`, `fullname`, `user_type`, `created_at`) VALUES
+(23, 'superadmin', 'admin', 'admin@evelio.edu', 'System Administrator', 'Admin', '2025-11-21 18:31:33');
+
+--
 -- Indexes for dumped tables
 --
+
+--
+-- Indexes for table `admin_details`
+--
+ALTER TABLE `admin_details`
+  ADD PRIMARY KEY (`user_id`);
 
 --
 -- Indexes for table `enrollment`
@@ -248,7 +292,8 @@ ALTER TABLE `strand`
 --
 ALTER TABLE `student_details`
   ADD PRIMARY KEY (`user_id`),
-  ADD UNIQUE KEY `school_id` (`school_id`);
+  ADD UNIQUE KEY `school_id` (`school_id`),
+  ADD UNIQUE KEY `lrn` (`lrn`);
 
 --
 -- Indexes for table `subject`
@@ -280,7 +325,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `enrollment`
 --
 ALTER TABLE `enrollment`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `grade`
@@ -298,7 +343,7 @@ ALTER TABLE `monthly_attendance_summary`
 -- AUTO_INCREMENT for table `section`
 --
 ALTER TABLE `section`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `section_assignment`
@@ -322,11 +367,17 @@ ALTER TABLE `subject`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- Constraints for dumped tables
 --
+
+--
+-- Constraints for table `admin_details`
+--
+ALTER TABLE `admin_details`
+  ADD CONSTRAINT `admin_details_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `enrollment`

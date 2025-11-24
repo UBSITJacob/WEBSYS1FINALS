@@ -1,23 +1,22 @@
 <?php
-// This file is meant to be loaded dynamically inside dashboard.php
+// This file must remain inside /admin/
 ?>
-<div class="add-student-form">
-  <h2>Add New Student</h2>
-  <form id="addStudentForm" autocomplete="off">
+<div class="add-admin-form">
+  <h2>Add New Admin</h2>
 
-    
+  <form id="addAdminForm" method="POST" autocomplete="off">
 
-    <label for="lrn">LRN (Learner Reference Number)</label>
-    <input type="text" name="lrn" id="lrn" required placeholder="Enter LRN">
-
-    <label for="schoolId">School ID</label>
-    <input type="text" name="schoolId" id="schoolId" required placeholder="e.g. 20258393">
+    <label for="admin_id">Admin ID</label>
+    <input type="text" name="admin_id" id="admin_id" required placeholder="Enter Admin ID">
 
     <label for="fullname">Full Name</label>
     <input type="text" name="fullname" id="fullname" required placeholder="Enter full name">
 
     <label for="username">Username</label>
     <input type="text" name="username" id="username" required placeholder="Enter username">
+
+    <label for="email">Email</label>
+    <input type="email" name="email" id="email" placeholder="Enter email">
 
     <label for="gender">Gender</label>
     <select name="gender" id="gender" required>
@@ -26,49 +25,36 @@
       <option value="Female">Female</option>
     </select>
 
-    <label for="contactNo">Contact Number</label>
-    <input type="text" name="contactNo" id="contactNo" required placeholder="e.g. 09123456789">
-
-    <label for="email">Email</label>
-    <input type="email" name="email" id="email" required placeholder="Enter email">
-
-     <label for="grade">Grade</label>
-    <select name="grade" id="grade" required>
-      <option value="">Select Grade</option>
-      <option value="7">7</option>
-      <option value="8">8</option>
-      <option value="9">9</option>
-      <option value="10">10</option>
-      <option value="11">11</option>
-      <option value="12">12</option>
+    <label for="user_type">Role</label>
+    <select name="user_type" id="user_type" required>
+      <option value="Admin">Admin</option>
     </select>
 
     <label>Default Password</label>
     <input type="text" value="1" readonly style="background:#f1f1f1;">
-    <small style="color:#555;">Default password is <b>1</b>. Change required at first login.</small>
+    <small style="color:#555;">Default password is <b>1</b>. Admin must change it on first login.</small>
 
-   
-
-    <button type="submit" id="submitBtn">Add Student</button>
+    <button type="submit" id="submitBtn">Add Admin</button>
   </form>
 </div>
 
-
 <script>
 (() => {
-  const form = document.getElementById('addStudentForm');
+  const form = document.getElementById('addAdminForm');
   if (!form) return;
 
   form.addEventListener('submit', async e => {
     e.preventDefault();
+
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = true;
     submitBtn.textContent = "Processing...";
 
     const formData = new FormData(form);
+    formData.append("status", "Active"); // new admin ALWAYS active
 
     try {
-      const res = await fetch('add_student.php', {
+      const res = await fetch('add_admin.php', {
         method: 'POST',
         body: formData,
         cache: 'no-store'
@@ -78,65 +64,67 @@
 
       Swal.fire({
         icon: data.status,
-        title: data.status === 'success' ? 'Student Added!' : 'Error',
+        title: data.status === 'success' ? 'Admin Added!' : 'Error',
         text: data.message
       });
 
       if (data.status === 'success') {
         form.reset();
+
         if (typeof loadInterface === 'function') {
-          setTimeout(() => loadInterface('manage_students.php'), 1000);
+          setTimeout(() => loadInterface('manage_admins.php'), 1000);
         }
       }
+
     } catch (error) {
       Swal.fire('Error', 'Could not process request.', 'error');
     } finally {
       submitBtn.disabled = false;
-      submitBtn.textContent = "Add Student";
+      submitBtn.textContent = "Add Admin";
     }
   });
 })();
 </script>
 
 <style>
-.add-student-form {
+.add-admin-form {
   background: #fff;
   padding: 20px;
   border-radius: 10px;
   box-shadow: 0 3px 10px rgba(0,0,0,0.1);
 }
-.add-student-form h2 {
+.add-admin-form h2 {
   color: #333;
   font-weight: 600;
 }
-.add-student-form label {
+.add-admin-form label {
   display: block;
   margin-top: 10px;
   font-weight: 600;
 }
-.add-student-form input,
-.add-student-form select {
+.add-admin-form input,
+.add-admin-form select {
   width: 100%;
   padding: 8px;
   margin-top: 5px;
   border: 1px solid #ccc;
   border-radius: 5px;
 }
-.add-student-form input:focus,
-.add-student-form select:focus {
+.add-admin-form input:focus,
+.add-admin-form select:focus {
   border-color: #007bff;
   outline: none;
 }
-.add-student-form input[readonly] {
+.add-admin-form input[readonly] {
   background: #f9f9f9;
 }
-.add-student-form small {
+.add-admin-form small {
   display: block;
   margin-top: 4px;
   font-size: 0.9em;
   color: #666;
 }
-.add-student-form button {
+.add-admin-form button {
   margin-top: 15px;
   background: #007bff;
   color: white;
@@ -146,10 +134,10 @@
   cursor: pointer;
   transition: 0.2s;
 }
-.add-student-form button:hover:not(:disabled) {
+.add-admin-form button:hover:not(:disabled) {
   background: #0056b3;
 }
-.add-student-form button:disabled {
+.add-admin-form button:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
