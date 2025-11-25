@@ -53,23 +53,21 @@ body {
     background: #1a1a1a;
     color: white;
     width: 230px;
-    height: 100vh;               /* Always full height */
+    height: 100vh;
     position: fixed;
     top: 0;
     left: 0;
     padding: 20px;
-    overflow-y: scroll;          /* Always scrollable */
+    overflow-y: scroll;
     overflow-x: hidden;
-    scroll-behavior: smooth;     /* Smooth scrolling */
+    scroll-behavior: smooth;
     transition: transform 0.3s ease;
 }
 
-/* Sidebar hidden (toggle) */
 .sidebar.hidden { 
     transform: translateX(-230px); 
 }
 
-/* Custom Scrollbar */
 .sidebar::-webkit-scrollbar { width: 8px; }
 .sidebar::-webkit-scrollbar-track { background: #1a1a1a; }
 .sidebar::-webkit-scrollbar-thumb {
@@ -78,8 +76,6 @@ body {
 }
 .sidebar::-webkit-scrollbar-thumb:hover { background: #666; }
 
-
-/* Sidebar profile center */
 .profile-section {
     text-align: center;
     margin-bottom: 20px;
@@ -104,7 +100,6 @@ body {
     cursor: pointer;
 }
 
-/* Sidebar links */
 .sidebar ul { list-style: none; padding: 0; }
 .sidebar ul li { margin: 15px 0; }
 .sidebar ul li a {
@@ -121,7 +116,7 @@ body {
     color: #fff;
 }
 
-/* Dropdown */
+/* DROPDOWN */
 .dropdown-content {
     display: none;
     flex-direction: column;
@@ -135,7 +130,7 @@ body {
     font-size: 14px;
 }
 
-/* HEADER (FIXED & ALIGNED) */
+/* HEADER */
 .header {
     position: fixed;
     top: 0;
@@ -144,16 +139,13 @@ body {
     height: 60px;
     background: #e9ecef;
     border-bottom: 1px solid #ccc;
-
     display: flex;
-    justify-content: space-between; /* Title left + controls right */
+    justify-content: space-between;
     align-items: center;
-
     padding: 0 20px;
     z-index: 999;
     transition: left 0.3s ease;
 }
-
 .header.sidebar-hidden { left: 0; }
 
 .header .title {
@@ -178,13 +170,10 @@ body {
     font-weight: bold;
 }
 .header button:hover { background: #0056b3; }
-
-.logout-btn {
-    background: #dc3545 !important;
-}
+.logout-btn { background: #dc3545 !important; }
 .logout-btn:hover { background: #c82333 !important; }
 
-/* MAIN CONTENT */
+/* MAIN */
 .main-content {
     margin-left: 230px;
     padding: 90px 25px 25px;
@@ -221,7 +210,6 @@ body {
     <div class="profile-section">
         <img src="<?= htmlspecialchars($admin['profile_pic'] ?? 'img/default.jpg'); ?>">
         <p><?= htmlspecialchars($admin['fullname'] ?? 'Administrator'); ?></p>
-
         <button class="update-password-btn" id="openSettings">Settings</button>
     </div>
 
@@ -236,7 +224,18 @@ body {
             </div>
         </li>
 
-        <li><a class="nav-link" data-page="manage_sections.php">Manage Sections</a></li>
+        <!-- UPDATED: Manage Sections dropdown -->
+        <li class="dropdown">
+            <a class="dropdown-toggle">Manage Sections ▼</a>
+            <div class="dropdown-content">
+                <a class="nav-link" data-page="All_Sections/grade7.php">Grade 7</a>
+                <a class="nav-link" data-page="All_Sections/grade8.php">Grade 8</a>
+                <a class="nav-link" data-page="All_Sections/grade9.php">Grade 9</a>
+                <a class="nav-link" data-page="All_Sections/grade10.php">Grade 10</a>
+                <a class="nav-link" data-page="All_Sections/grade11.php">Grade 11</a>
+                <a class="nav-link" data-page="All_Sections/grade12.php">Grade 12</a>
+            </div>
+        </li>
 
         <li class="dropdown">
             <a class="dropdown-toggle">Manage Teachers ▼</a>
@@ -253,6 +252,7 @@ body {
                 <a class="nav-link" data-page="manage_admins.php">Manage Admin</a>
             </div>
         </li>
+
     </ul>
 
 </div>
@@ -323,7 +323,7 @@ function loadPage(page) {
             localStorage.setItem("currentPage", page);
             setActiveLink(page);
 
-            // Execute inline scripts from dynamic page
+            // Execute inline scripts
             const temp = document.createElement("div");
             temp.innerHTML = html;
             temp.querySelectorAll("script").forEach(oldScript => {
@@ -335,7 +335,7 @@ function loadPage(page) {
         });
 }
 
-// Active nav highlighting
+// Active nav highlight
 function setActiveLink(page) {
     document.querySelectorAll(".nav-link").forEach(a => {
         a.classList.remove("active");
@@ -348,7 +348,7 @@ function setActiveLink(page) {
     });
 }
 
-// Click nav links
+// Click events
 document.querySelectorAll(".nav-link").forEach(link => {
     link.addEventListener("click", e => {
         e.preventDefault();
@@ -356,11 +356,11 @@ document.querySelectorAll(".nav-link").forEach(link => {
     });
 });
 
-// Sidebar top settings button
+// Settings
 document.getElementById("openSettings").onclick = () =>
     loadPage("settings.php");
 
-// Restore last opened page
+// Restore last page
 window.addEventListener("DOMContentLoaded", () => {
     const last = localStorage.getItem("currentPage");
     if (last) {
