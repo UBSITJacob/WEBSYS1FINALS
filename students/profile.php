@@ -38,10 +38,11 @@ $currentPage = basename($_SERVER['PHP_SELF']);  // Get current page
     <title>Profile | Student Portal</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        /* Global Styles */
         body {
+            margin: 0;
             font-family: 'Segoe UI', sans-serif;
             background-color: #f4f4f4;
-            margin: 0;
         }
 
         /* Sidebar Styles */
@@ -58,7 +59,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);  // Get current page
         }
 
         .sidebar.hidden {
-            transform: translateX(-230px); /* Hide the sidebar */
+            transform: translateX(-230px);
         }
 
         .sidebar ul {
@@ -84,26 +85,105 @@ $currentPage = basename($_SERVER['PHP_SELF']);  // Get current page
             color: #fff;
         }
 
+        /* Profile Section Styling */
+        .profile-section {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .profile-section img {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            object-fit: cover;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .profile-section p {
+            margin-top: 10px;
+            font-size: 1.2rem;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        /* Sidebar settings button */
+        .update-password-btn {
+            background: #28a745;
+            color: #fff;
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 20px;
+            font-weight: bold;
+            width: 100%;
+        }
+
+        .update-password-btn:hover {
+            background: #218838;
+        }
+
         /* Header Styles */
         .header {
-            margin-left: 230px;
+            position: fixed;
+            top: 0;
+            left: 230px;
+            right: 0;
+            height: 60px;
             background: #e9ecef;
-            padding: 12px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding: 0 20px;
             border-bottom: 2px solid #ccc;
-            transition: 0.3s;
+            z-index: 999;
+            transition: left 0.3s ease;
         }
 
         .header.sidebar-hidden {
-            margin-left: 0;
+            left: 0;
         }
 
+        .header .title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header button {
+            background: #007bff;
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .header button:hover {
+            background: #0056b3;
+        }
+
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+
+        /* Main Content */
         .main-content {
             margin-left: 230px;
-            padding: 25px;
-            min-height: calc(100vh - 60px);
+            padding: 90px 25px 25px;
             transition: margin-left 0.3s ease;
         }
 
@@ -111,34 +191,11 @@ $currentPage = basename($_SERVER['PHP_SELF']);  // Get current page
             margin-left: 0;
         }
 
-        /* Profile Section Styles */
-        .profile-section {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        /* Reduced size for profile image */
-        .profile-section img {
-            width: 90px; /* Smaller image */
-            height: 90px; /* Smaller image */
-            border-radius: 50%;
-            object-fit: cover;
-            display: block;
-            margin: 0 auto;
-            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2); /* Added shadow to profile image */
-        }
-
-        .profile-section p { 
-            margin-top: 10px;
-            font-size: 1.1rem; /* Slightly smaller font size */
-            color: #333;
-            font-weight: bold;
-        }
-
-        /* Card Styles */
+        /* Profile Info Card Styling */
         .card {
             background: #fff;
             padding: 20px;
+            min-width: 250px;
             border-radius: 10px;
             box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
             margin-bottom: 20px;
@@ -158,12 +215,6 @@ $currentPage = basename($_SERVER['PHP_SELF']);  // Get current page
         .card table th, .card table td {
             text-align: left;
             padding: 10px;
-        }
-
-        /* Sidebar and Link Hover Effects */
-        .sidebar ul li a:hover {
-            background-color: #0056b3;
-            color: #fff;
         }
 
         /* Responsive Design */
@@ -191,6 +242,8 @@ $currentPage = basename($_SERVER['PHP_SELF']);  // Get current page
     <div class="profile-section">
         <img src="https://cdn-icons-png.flaticon.com/512/3870/3870822.png" alt="Profile pic">
         <p><?= htmlspecialchars($profile['fullname']) ?></p>
+        <!-- Settings button -->
+        <button class="update-password-btn" id="openSettings">Settings</button>
     </div>
     <ul>
         <li><a href="index.php" class="<?= ($currentPage == 'index.php') ? 'active' : '' ?>">Dashboard</a></li>
@@ -203,17 +256,15 @@ $currentPage = basename($_SERVER['PHP_SELF']);  // Get current page
 <!-- HEADER -->
 <div class="header" id="header">
     <div class="title">Student Profile</div>
-    <div>
-        <button id="toggleSidebar" class="btn btn-primary">☰</button>
-        <a href="logout.php" class="btn btn-danger">Logout</a>
+    <div class="controls">
+        <button id="toggleSidebar">☰</button>
+        <a href="logout.php" class="btn logout-btn">Logout</a>
     </div>
 </div>
 
 <!-- MAIN CONTENT -->
 <div class="main-content" id="mainContent">
 
-<<<<<<< HEAD
-=======
     <!-- Profile Section -->
     <div class="profile-section">
         <img src="https://cdn-icons-png.flaticon.com/512/3870/3870822.png" alt="Profile pic">
@@ -221,7 +272,6 @@ $currentPage = basename($_SERVER['PHP_SELF']);  // Get current page
     </div>
 
     <!-- Basic Info Card -->
->>>>>>> 14ddbc2b81b98676118ba57323f360df6caaede0
     <div class="card">
         <h4>Basic Info</h4>
         <table class="table table-bordered">
@@ -279,6 +329,11 @@ document.getElementById("toggleSidebar").onclick = () => {
     document.getElementById("sidebar").classList.toggle("hidden");
     document.getElementById("header").classList.toggle("sidebar-hidden");
     document.getElementById("mainContent").classList.toggle("sidebar-hidden");
+};
+
+// Settings button click event
+document.getElementById("openSettings").onclick = () => {
+    window.location.href = "settings.php"; // Redirect to settings page
 };
 </script>
 

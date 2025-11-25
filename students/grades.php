@@ -101,7 +101,7 @@ body { margin:0; font-family: 'Segoe UI', sans-serif; background-color: #f4f4f4;
                         <?php foreach ($periods as $p): ?>
                             <th><?= htmlspecialchars($p) ?></th>
                         <?php endforeach; ?>
-                        <th>UNITS</th>
+                    
                         <th>STATUS</th>
                     </tr>
                 </thead>
@@ -112,7 +112,6 @@ body { margin:0; font-family: 'Segoe UI', sans-serif; background-color: #f4f4f4;
                         <?php foreach ($periods as $p): ?>
                             <td><?= htmlspecialchars($g[$p] ?? '-') ?></td>
                         <?php endforeach; ?>
-                        <td>0.00</td> 
                         <td>PASSED</td>
                     </tr>
                     <?php endforeach; ?>
