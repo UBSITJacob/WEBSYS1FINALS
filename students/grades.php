@@ -1,18 +1,21 @@
 <?php
 session_start();
-require_once "oop_functions.php";
-
 if (!isset($_SESSION['student'])) {
     header("Location: ../index.php");
     exit;
 }
+
+require_once "oop_functions.php";
 
 $student_id = $_SESSION['student']['id'];
 $student = new Student($student_id);
 $grades = $student->getGrades() ?: [];
 
 // Define the required period keys for column headers
-$periods = ['1st Qtr', '2nd Qtr', '3rd Qtr', '4th Qtr', 'Final'];
+$periods = ['1st Qtr', '2nd Qtr', '3rd Qtr', '4th Qtr']; // <-- FIXED: Removed 'Final' from input periods
+
+// Define ALL column headers for display, including the calculated 'Final' column
+$display_periods = ['1st Qtr', '2nd Qtr', '3rd Qtr', '4th Qtr', 'Final'];
 
 // Calculate average (Optional but good for display)
 $overall_total = 0;
@@ -22,7 +25,7 @@ if (!empty($grades)) {
     foreach ($grades as $subject_data) {
         // Find the numerical grades for the subject
         $numerical_grades = array_filter($subject_data, function($key) {
-            return in_array($key, ['1st Qtr', '2nd Qtr', '3rd Qtr', '4th Qtr', 'Final']);
+            return in_array($key, ['1st Qtr', '2nd Qtr', '3rd Qtr', '4th Qtr']); // Only average Q1-Q4
         }, ARRAY_FILTER_USE_KEY);
 
         foreach ($numerical_grades as $grade_value) {
@@ -34,6 +37,21 @@ if (!empty($grades)) {
     }
 }
 $average = ($overall_count > 0) ? round($overall_total / $overall_count, 2) : 'N/A';
+
+// Function to safely compute the final grade for one subject
+function compute_subject_final($subject_data) {
+    $q1 = (float)$subject_data['1st Qtr'];
+    $q2 = (float)$subject_data['2nd Qtr'];
+    $q3 = (float)$subject_data['3rd Qtr'];
+    $q4 = (float)$subject_data['4th Qtr'];
+
+    // Check if all four quarters have valid numeric values
+    if ($q1 > 0 && $q2 > 0 && $q3 > 0 && $q4 > 0) {
+        $final = round(($q1 + $q2 + $q3 + $q4) / 4, 2);
+        return number_format($final, 2);
+    }
+    return '-';
+}
 ?>
 
 <!DOCTYPE html>
@@ -101,18 +119,29 @@ body { margin:0; font-family: 'Segoe UI', sans-serif; background-color: #f4f4f4;
                         <?php foreach ($periods as $p): ?>
                             <th><?= htmlspecialchars($p) ?></th>
                         <?php endforeach; ?>
-                    
+                        
+                        <th style="background-color: #28a745; border-color: #1e7e34;">FINAL GRADE</th>
+                        
                         <th>STATUS</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($grades as $g): ?>
+                    <?php foreach ($grades as $g): 
+                        $final_grade = compute_subject_final($g);
+                        $status = ($final_grade !== '-' && $final_grade >= 75) ? 'PASSED' : (($final_grade !== '-') ? 'FAILED' : '-');
+                    ?>
                     <tr>
                         <td><?= htmlspecialchars($g['Subject']) ?></td>
+                        
                         <?php foreach ($periods as $p): ?>
                             <td><?= htmlspecialchars($g[$p] ?? '-') ?></td>
                         <?php endforeach; ?>
-                        <td>PASSED</td>
+                        
+                        <td style="font-weight: bold;">
+                            <?= $final_grade ?>
+                        </td>
+
+                        <td><?= $status ?></td> 
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
