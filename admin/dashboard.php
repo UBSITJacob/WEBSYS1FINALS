@@ -225,15 +225,15 @@ body {
         </li>
 
         <!-- UPDATED: Manage Sections dropdown -->
-        <li class="dropdown">
+        <li class="dropdown open">
             <a class="dropdown-toggle">Manage Sections ▼</a>
             <div class="dropdown-content">
-                <a class="nav-link" data-page="All_Sections/grade7.php">Grade 7</a>
-                <a class="nav-link" data-page="All_Sections/grade8.php">Grade 8</a>
-                <a class="nav-link" data-page="All_Sections/grade9.php">Grade 9</a>
-                <a class="nav-link" data-page="All_Sections/grade10.php">Grade 10</a>
-                <a class="nav-link" data-page="All_Sections/grade11.php">Grade 11</a>
-                <a class="nav-link" data-page="All_Sections/grade12.php">Grade 12</a>
+                <a class="nav-link" data-page="manage_sections.php?grade=7">Grade 7</a>
+                <a class="nav-link" data-page="manage_sections.php?grade=8">Grade 8</a>
+                <a class="nav-link" data-page="manage_sections.php?grade=9">Grade 9</a>
+                <a class="nav-link" data-page="manage_sections.php?grade=10">Grade 10</a>
+                <a class="nav-link" data-page="manage_sections.php?grade=11">Grade 11</a>
+                <a class="nav-link" data-page="manage_sections.php?grade=12">Grade 12</a>
             </div>
         </li>
 
