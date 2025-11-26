@@ -203,7 +203,6 @@ $profile = $student->getProfile();
         <li><a href="index.php" class="active">Dashboard</a></li>
         <li><a href="profile.php">Profile</a></li>
         <li><a href="grades.php">Grades</a></li>
-        <li><a href="enrollment.php">Enrollment</a></li>
     </ul>
 </div>
 

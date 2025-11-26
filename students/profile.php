@@ -248,7 +248,6 @@ $currentPage = basename($_SERVER['PHP_SELF']);  // Get current page
         <li><a href="index.php" class="<?= ($currentPage == 'index.php') ? 'active' : '' ?>">Dashboard</a></li>
         <li><a href="profile.php" class="<?= ($currentPage == 'profile.php') ? 'active' : '' ?>">Profile</a></li>
         <li><a href="grades.php" class="<?= ($currentPage == 'grades.php') ? 'active' : '' ?>">Grades</a></li>
-        <li><a href="enrollment.php" class="<?= ($currentPage == 'enrollment.php') ? 'active' : '' ?>">Enrollment</a></li>
     </ul>
 </div>
 

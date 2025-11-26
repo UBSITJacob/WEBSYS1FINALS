@@ -76,7 +76,6 @@ body { margin:0; font-family: 'Segoe UI', sans-serif; background-color: #f4f4f4;
         <li><a href="index.php">Dashboard</a></li>
         <li><a href="profile.php">Profile</a></li>
         <li><a class="active" href="grades.php">Grades</a></li>
-        <li><a href="enrollment.php">Enrollment</a></li>
     </ul>
 </div>
 

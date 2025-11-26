@@ -262,7 +262,6 @@ if ($hour < 12) {
         <li><a class="active" href="index.php">Dashboard</a></li>
         <li><a href="profile.php">Profile</a></li>
         <li><a href="grades.php">Grades</a></li>
-        <li><a href="enrollment.php">Enrollment</a></li>
         <!-- Removed the Settings link from the sidebar menu -->
     </ul>
 </div>
