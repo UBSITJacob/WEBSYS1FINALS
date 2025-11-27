@@ -186,3 +186,131 @@ table.sf2 td:nth-child(2) {
     font-weight: bold;
     background: #f0f0f0;
 }
+
+/* ================================
+   Attendance Calendar Layout
+   ================================ */
+
+.calendar-wrapper {
+    margin-top: 10px;
+}
+
+.calendar-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.calendar-table thead th {
+    background: #007bff;
+    color: #ffffff;
+    font-size: 12px;
+    padding: 6px;
+    text-align: center;
+}
+
+.calendar-table td {
+    border: 1px solid #cccccc;
+    padding: 4px;
+    vertical-align: top;
+    height: 80px;
+}
+
+/* Calendar cells */
+
+.calendar-day {
+    position: relative;
+}
+
+.calendar-day .day-number {
+    font-weight: 600;
+    font-size: 11px;
+    text-align: right;
+    margin-bottom: 4px;
+}
+
+.calendar-day .day-number input {
+    width: 32px;
+    font-size: 11px;
+    text-align: right;
+    border: none;
+    background: transparent;
+    outline: none;
+    color: #1a1a1a;
+}
+
+.calendar-day .day-status select {
+    width: 100%;
+    font-size: 11px;
+    padding: 2px;
+}
+
+.calendar-empty {
+    background: #f9f9f9;
+}
+
+/* Filter form rows */
+
+.form-row {
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.form-row label {
+    min-width: 90px;
+    font-weight: 600;
+}
+
+.form-row select,
+.form-row input[type="number"] {
+    max-width: 240px;
+}
+
+/* Summary row */
+
+.attendance-summary {
+    margin-top: 10px;
+    font-size: 13px;
+}
+
+.attendance-summary span {
+    margin-right: 12px;
+}
+
+/* Bottom buttons */
+
+.calendar-controls {
+    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* Attendance dropdown + colors */
+
+.attendance-select {
+    font-weight: 600;
+}
+
+.attendance-P {
+    background: #d4edda !important;
+    color: #155724 !important;
+}
+
+.attendance-A {
+    background: #f8d7da !important;
+    color: #721c24 !important;
+}
+
+.attendance-TU,
+.attendance-TL {
+    background: #fff3cd !important;
+    color: #856404 !important;
+}
+
+.attendance-empty {
+    background: #eeeeee !important;
+    color: #666666 !important;
+}
