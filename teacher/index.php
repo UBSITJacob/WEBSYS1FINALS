@@ -27,6 +27,8 @@ $teacher   = $teacherdb->getTeacherInfo($teacher_id);
 $advisory  = $teacherdb->getAdvisorySection($teacher_id);
 $loads     = $teacherdb->getTeacherLoads($teacher_id);
 
+// (debug output removed)
+
 // 3. ASSIGN DISPLAY VARIABLES BASED ON LOADED DATA (FIX)
 // This ensures variables are defined even if $teacher is null.
 if ($teacher) {

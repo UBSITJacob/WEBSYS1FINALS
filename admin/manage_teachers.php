@@ -62,6 +62,10 @@ $result = $conn->query($sql);
                                 style="background:#20c997;color:white;border:none;padding:5px 8px;border-radius:4px;cursor:pointer;margin-right:6px;">
                             Assign Subjects
                         </button>
+                        <button class="assignAdviserBtn" data-id="<?= (int)$row['id'] ?>" data-name="<?= htmlspecialchars($row['fullname']) ?>"
+                            style="background:#17a2b8;color:white;border:none;padding:5px 8px;border-radius:4px;cursor:pointer;margin-right:6px;">
+                            Assign Adviser
+                        </button>
                         <button class="editBtn" data-id="<?= (int)$row['id'] ?>"
                             style="background:#007bff;color:white;border:none;padding:5px 8px;border-radius:4px;cursor:pointer;">
                             Edit
@@ -158,6 +162,29 @@ $result = $conn->query($sql);
       </div>
     </form>
   </div>
+</div>
+
+<!-- Adviser modal -->
+<div id="adviserModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+        <h3>Assign Adviser</h3>
+        <form id="adviserForm">
+            <input type="hidden" name="teacher_id" id="adviser_teacher_id">
+
+            <label for="adviser_select">Select Section</label>
+            <select id="adviser_select" name="section_id" style="width:100%; padding:8px; margin-bottom:12px;">
+                <option value="">-- Loading sections... --</option>
+            </select>
+
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <button type="button" id="removeAdviserBtn" style="background:#dc3545;color:white;border:none;padding:8px 12px;border-radius:5px;cursor:pointer;">Remove Adviser</button>
+                <div>
+                    <button type="submit" style="background:#28a745;color:white;border:none;padding:8px 12px;border-radius:5px;cursor:pointer;">Save</button>
+                    <button type="button" onclick="closeAdviserModal()" style="background:#6c757d;color:white;border:none;padding:8px 12px;border-radius:5px;cursor:pointer;margin-left:6px;">Cancel</button>
+                </div>
+            </div>
+        </form>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -359,6 +386,7 @@ function initManageTeachers() {
     // Delegate ALL actions to the tbody listener
     tbody.addEventListener("click", function(e) {
         const assignBtn = e.target.closest(".assignBtn");
+        const assignAdviserBtn = e.target.closest(".assignAdviserBtn");
         const editBtn = e.target.closest(".editBtn");
         const deleteBtn = e.target.closest(".deleteBtn");
 
@@ -370,7 +398,15 @@ function initManageTeachers() {
             return; 
         }
 
-        // 2. EDIT BUTTON
+        // 2. ASSIGN ADVISER
+        if (assignAdviserBtn) {
+            const id = assignAdviserBtn.dataset.id;
+            const name = assignAdviserBtn.dataset.name;
+            loadAdviserModule(id, name);
+            return;
+        }
+
+        // 3. EDIT BUTTON
         if (editBtn) {
             const id = editBtn.dataset.id;
             if (!id) return;
@@ -401,7 +437,7 @@ function initManageTeachers() {
             return;
         }
 
-        // 3. DELETE BUTTON
+        // 4. DELETE BUTTON
         if (deleteBtn) {
             const id = deleteBtn.dataset.id;
             if (!id) return;
@@ -459,6 +495,122 @@ function initManageTeachers() {
                 .catch(() => Swal.fire("Error", "Could not update teacher.", "error"));
         });
     }
+}
+
+/* =========================================================
+   ADVISER MODULE
+   - loadAdviserModule(teacherId, teacherName)
+   - closeAdviserModal()
+   - adviser form submit / remove
+   ========================================================= */
+
+function closeAdviserModal() {
+    const m = document.getElementById('adviserModal');
+    if (m) m.style.display = 'none';
+}
+
+async function loadAdviserModule(teacherId, teacherName) {
+    const modal = document.getElementById('adviserModal');
+    const select = document.getElementById('adviser_select');
+    const hidden = document.getElementById('adviser_teacher_id');
+
+    hidden.value = teacherId;
+    modal.style.display = 'block';
+    select.innerHTML = '<option value="">-- Loading sections... --</option>';
+
+    // 1. load all sections
+    try {
+        const res = await fetch('teacher_assignment_api.php?action=get_all_sections');
+        const data = await res.json();
+        if (data.status === 'success') {
+            select.innerHTML = '<option value="">-- Unassigned / Select Section --</option>';
+            data.sections.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.section_id;
+                opt.textContent = `G${s.grade_level} ${s.section_name} (${s.section_letter})`;
+                select.appendChild(opt);
+            });
+        } else {
+            select.innerHTML = '<option value="">-- Error loading sections --</option>';
+        }
+    } catch (e) {
+        select.innerHTML = '<option value="">-- Network error --</option>';
+    }
+
+    // 2. load current advisory for this teacher and pre-select
+    try {
+        const res2 = await fetch(`teacher_assignment_api.php?action=get_teacher_advisory&id=${teacherId}`);
+        const d2 = await res2.json();
+        if (d2.status === 'success' && d2.section) {
+            select.value = d2.section.section_id || '';
+        } else {
+            select.value = '';
+        }
+    } catch (e) {
+        // ignore
+    }
+}
+
+// Adviser form submit
+const adviserForm = document.getElementById('adviserForm');
+if (adviserForm) {
+    adviserForm.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const teacherId = document.getElementById('adviser_teacher_id').value;
+        const sectionId = document.getElementById('adviser_select').value;
+        if (!teacherId || !sectionId) return Swal.fire('Warning', 'Please select a section to assign.', 'warning');
+
+        try {
+            const fd = new FormData();
+            fd.append('action', 'set_adviser');
+            fd.append('teacher_id', teacherId);
+            fd.append('section_id', sectionId);
+
+            const res = await fetch('teacher_assignment_api.php', { method: 'POST', body: fd });
+            const data = await res.json();
+            if (data.status === 'success') {
+                Swal.fire('Success', data.message, 'success').then(() => location.reload());
+            } else {
+                Swal.fire('Error', data.message || 'Failed to assign adviser', 'error');
+            }
+        } catch (e) {
+            Swal.fire('Error', 'Network error assigning adviser.', 'error');
+        }
+    });
+}
+
+// Remove adviser button
+const removeAdviserBtn = document.getElementById('removeAdviserBtn');
+if (removeAdviserBtn) {
+    removeAdviserBtn.addEventListener('click', async () => {
+        const teacherId = document.getElementById('adviser_teacher_id').value;
+        if (!teacherId) return;
+
+        Swal.fire({
+            title: 'Remove Adviser?',
+            text: 'This will unassign the adviser from their current section.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Yes, remove'
+        }).then(async (r) => {
+            if (!r.isConfirmed) return;
+            try {
+                const fd = new FormData();
+                fd.append('action', 'remove_adviser');
+                fd.append('teacher_id', teacherId);
+                const res = await fetch('teacher_assignment_api.php', { method: 'POST', body: fd });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    Swal.fire('Removed!', data.message, 'success').then(() => location.reload());
+                } else {
+                    Swal.fire('Error', data.message || 'Failed to remove adviser', 'error');
+                }
+            } catch (e) {
+                Swal.fire('Error', 'Network error removing adviser.', 'error');
+            }
+        });
+    });
 }
 
 // 🔑 FINAL FIX: Ensure the initialization is called

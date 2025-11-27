@@ -35,6 +35,8 @@ if ($advisory && isset($advisory['id'])) {
         $selected_academic_year
     );
 }
+
+// (debug output removed)
 ?>
 <!DOCTYPE html>
 <html>
@@ -54,14 +56,17 @@ if ($advisory && isset($advisory['id'])) {
 
         <?php if ($advisory && isset($advisory['section_name'])): ?>
             <p>
-                Section:
-                <strong><?php echo htmlspecialchars($advisory['section_name']); ?></strong><br>
-                Grade Level:
-                <strong><?php echo htmlspecialchars($advisory['grade_level']); ?></strong><br>
-                <?php if (isset($advisory['section_letter'])): ?>
-                    Section Letter:
-                    <strong><?php echo htmlspecialchars($advisory['section_letter']); ?></strong><br>
-                <?php endif; ?>
+                <strong>Section:</strong>
+                <?php
+                    $grade = htmlspecialchars($advisory['grade_level'] ?? '');
+                    $name = htmlspecialchars($advisory['section_name'] ?? '');
+                    $letter = htmlspecialchars($advisory['section_letter'] ?? '');
+                    if ($grade !== '') { echo 'G' . $grade . ' '; }
+                    echo $name;
+                    if ($letter !== '') { echo ' (' . $letter . ')'; }
+                ?>
+                <br>
+                <strong>Grade Level:</strong> <?php echo htmlspecialchars($advisory['grade_level']); ?>
             </p>
 
             <form method="get" action="advisory.php">

@@ -43,14 +43,33 @@ class TeacherDB {
        ADVISORY SECTION
     ----------------------------------------------------------- */
     public function getAdvisorySection($teacher_id) {
+        // Prefer explicit adviser_id on section table (current canonical location)
         $sql = "SELECT *
                 FROM section
-                WHERE adviser_id = :tid";
+                WHERE adviser_id = :tid
+                LIMIT 1";
 
         $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(":tid", $teacher_id);
+        $stmt->bindParam(":tid", $teacher_id, PDO::PARAM_INT);
         $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            return $row;
+        }
+
+        // Fallback: some systems store adviser as a special assignment in section_assignment
+        // Look for a section_assignment with assignment_type = 'Adviser'
+        $sql2 = "SELECT s.*
+                 FROM section_assignment sa
+                 JOIN section s ON sa.section_id = s.id
+                 WHERE sa.teacher_id = :tid AND sa.assignment_type = 'Adviser'
+                 LIMIT 1";
+
+        $stmt2 = $this->conn->prepare($sql2);
+        $stmt2->bindParam(":tid", $teacher_id, PDO::PARAM_INT);
+        $stmt2->execute();
+        $row2 = $stmt2->fetch(PDO::FETCH_ASSOC);
+        return $row2 ?: null;
     }
 
     /* -----------------------------------------------------------
