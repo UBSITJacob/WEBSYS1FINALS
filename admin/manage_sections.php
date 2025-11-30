@@ -1,14 +1,11 @@
 <?php 
-// admin/manage_sections.php - FIXED FOR AJAX LOADING AND BUTTON FUNCTIONALITY
+// admin/manage_sections.php - Listing ALL sections and enabling Grade-level filtering via JS/Sidebar
 require_once "../includes/oop_functions.php";
 
 $db = new Database();
 $conn = $db->getConnection();
 
 // --- PHP LOGIC ---
-$target_grade = isset($_GET['grade']) ? intval($_GET['grade']) : 7; 
-$current_academic_year = "2024-2025"; 
-
 // Query ALL sections (for filtering by grade level in JS)
 $sql = "
     SELECT 
@@ -35,6 +32,7 @@ if ($result) {
     $result->free(); 
 }
 
+$current_academic_year = "2024-2025";
 $initial_target_grade = isset($_GET['grade']) ? intval($_GET['grade']) : 7;
 ?>
 
@@ -107,10 +105,6 @@ $initial_target_grade = isset($_GET['grade']) ? intval($_GET['grade']) : 7;
                                         style="background:#007bff;color:white;border:none;padding:5px 8px;border-radius:4px;cursor:pointer;margin-left:6px;">
                                         Edit
                                     </button>
-                                    <button class="deleteSectionBtn" data-id="<?= (int)$row['sectionId'] ?>"
-                                        style="background:#dc3545;color:white;border:none;padding:5px 8px;border-radius:4px;cursor:pointer;margin-left:6px;">
-                                        Delete
-                                    </button>
                                 </td>
                             </tr>
                             
@@ -177,172 +171,284 @@ $initial_target_grade = isset($_GET['grade']) ? intval($_GET['grade']) : 7;
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    const CURRENT_ACADEMIC_YEAR = '<?php echo $current_academic_year; ?>';
-    let activeGrade = <?php echo $initial_target_grade; ?>;
+    const CURRENT_ACADEMIC_YEAR = '<?php echo $current_academic_year; ?>';
+    let activeGrade = <?php echo $initial_target_grade; ?>;
 
-    // --- Modal/Global Control Functions (Assumed defined globally) ---
-    function openAddSectionModal() { /* Placeholder - Assumed defined elsewhere */ }
-    function closeEnrollModal() {
-        document.getElementById("enrollStudentModal").style.display = "none";
-        document.getElementById('studentSearchInput').value = '';
-    }
-    
-    // FIX: openEnrollModal now correctly calls the fetchUnassignedStudents for the modal content
-    function openEnrollModal(sectionId, gradeLevel, sectionName) {
-        document.getElementById('enrollModalTitle').innerHTML = `Enroll Students into <strong>${sectionName}</strong>`;
-        document.getElementById('enroll_section_id').value = sectionId;
-        document.getElementById('enroll_grade_level').value = gradeLevel;
-        document.getElementById('enrollStudentModal').style.display = "flex";
-        
-        // This is the critical AJAX call that populates the checklist
-        fetchUnassignedStudents(gradeLevel); 
-    }
+    function openAddSectionModal() {
+        document.getElementById("addSectionModal").style.display = "flex";
+    }
+    function closeAddSectionModal() {
+        document.getElementById("addSectionModal").style.display = "none";
+    }
+    
+    function closeEnrollModal() {
+        document.getElementById("enrollStudentModal").style.display = "none";
+        document.getElementById('studentSearchInput').value = '';
+    }
 
-    // --- Student List Renderer (Enrolled) ---
-    function renderStudentList(students, containerElement) {
-        if (!students || students.length === 0) {
-            containerElement.innerHTML = '<p style="margin: 0; color: #666;">No students enrolled in this section for ' + CURRENT_ACADEMIC_YEAR + '.</p>';
-            return;
-        }
+    function openEnrollModal(sectionId, gradeLevel, sectionName) {
+        document.getElementById('enrollModalTitle').innerHTML = `Enroll Students into <strong>${sectionName}</strong>`;
+        document.getElementById('enroll_section_id').value = sectionId;
+        document.getElementById('enroll_grade_level').value = gradeLevel;
+        document.getElementById('enrollStudentModal').style.display = "flex";
+        
+        // Load unassigned students matching the grade level
+        fetchUnassignedStudents(gradeLevel); 
+    }
 
-        let html = '<h4>Enrolled Students (' + students.length + ')</h4>';
-        html += '<table class="inner-student-table">';
-        html += '<thead style="background:#e0e0e0; color:#333;"><tr><th>School ID</th><th>Full Name</th></tr></thead><tbody>';
-        
-        students.forEach(student => {
-            html += `<tr>
-                        <td style="width: 30%;">${student.school_id}</td>
-                        <td style="width: 70%;">${student.fullname}</td>
-                    </tr>`;
-        });
+    // --- Student List Renderer (Enrolled) ---
+    function renderStudentList(students, containerElement) {
+        if (!students || students.length === 0) {
+            containerElement.innerHTML = '<p style="margin: 0; color: #666;">No students enrolled in this section for ' + CURRENT_ACADEMIC_YEAR + '.</p>';
+            return;
+        }
 
-        html += '</tbody></table>';
-        containerElement.innerHTML = html;
-    }
+        let html = '<h4>Enrolled Students (' + students.length + ')</h4>';
+        html += '<table class="inner-student-table">';
+        html += '<thead style="background:#e0e0e0; color:#333;"><tr><th>School ID</th><th>Full Name</th></tr></thead><tbody>';
+        
+        students.forEach(student => {
+            html += `<tr>
+                        <td style="width: 30%;">${student.school_id}</td>
+                        <td style="width: 70%;">${student.fullname}</td>
+                    </tr>`;
+        });
 
-    async function loadStudentsForSection(sectionId, container) {
-        container.innerHTML = '<p style="margin: 0; color: #007bff;">Loading Students...</p>';
-        
-        try {
-            const url = 'get_students_for_section.php?id=' + sectionId + '&ay=' + CURRENT_ACADEMIC_YEAR;
-            const res = await fetch(url);
-            const data = await res.json();
-            
-            if (data.status === 'success') {
-                renderStudentList(data.students, container);
-            } else {
-                container.innerHTML = '<p style="margin: 0; color: #dc3545;">Error fetching students: ' + (data.message || 'Server error.') + '</p>';
-            }
+        html += '</tbody></table>';
+        containerElement.innerHTML = html;
+    }
 
-        } catch (error) {
-            container.innerHTML = '<p style="margin: 0; color: #dc3545;">Network error: Unable to load data.</p>';
-        }
-    }
+    async function loadStudentsForSection(sectionId, container) {
+        container.innerHTML = '<p style="margin: 0; color: #007bff;">Loading Students...</p>';
+        
+        try {
+            const url = 'get_students_for_section.php?id=' + sectionId + '&ay=' + CURRENT_ACADEMIC_YEAR;
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            if (data.status === 'success') {
+                renderStudentList(data.students, container);
+            } else {
+                container.innerHTML = '<p style="margin: 0; color: #dc3545;">Error fetching students: ' + (data.message || 'Server error.') + '</p>';
+            }
 
-    // --- Unassigned Students AJAX (For Enrollment Modal) ---
+        } catch (error) {
+            container.innerHTML = '<p style="margin: 0; color: #dc3545;">Network error: Unable to load data.</p>';
+        }
+    }
 
-    async function fetchUnassignedStudents(gradeLevel, query = '') {
-        const studentListContainer = document.getElementById('unassignedStudentList');
-        studentListContainer.innerHTML = '<p style="margin: 0; color: #007bff;">Loading unassigned students...</p>';
-        document.getElementById('finalEnrollBtn').disabled = true;
+    // --- Unassigned Students AJAX (For Enrollment Modal) ---
 
-        try {
-            const url = `fetch_unassigned_students.php?grade=${gradeLevel}&q=${encodeURIComponent(query)}`;
-            const res = await fetch(url);
-            const data = await res.json();
+    async function fetchUnassignedStudents(gradeLevel, query = '') {
+        const studentListContainer = document.getElementById('unassignedStudentList');
+        studentListContainer.innerHTML = '<p style="margin: 0; color: #007bff;">Loading unassigned students...</p>';
+        document.getElementById('finalEnrollBtn').disabled = true;
 
-            if (data.status === 'success') {
-                renderUnassignedStudentCheckboxes(data.students, studentListContainer);
-            } else {
-                studentListContainer.innerHTML = `<p style="margin: 0; color: #dc3545;">Error: ${data.message || 'Server error.'}</p>`;
-            }
-        } catch (error) {
-            studentListContainer.innerHTML = '<p style="margin: 0; color: #dc3545;">Network error fetching student data.</p>';
-        }
-    }
-    
-    function renderUnassignedStudentCheckboxes(students, containerElement) {
-        if (!students || students.length === 0) {
-            containerElement.innerHTML = '<p style="margin: 0; color: #666;">No unassigned students found for this grade level or matching your search.</p>';
-            document.getElementById('finalEnrollBtn').disabled = true;
-            return;
-        }
+        try {
+            const url = `fetch_unassigned_students.php?grade=${gradeLevel}&q=${encodeURIComponent(query)}`;
+            const res = await fetch(url);
+            const data = await res.json();
 
-        let html = '';
-        students.forEach(student => {
-            html += `
-                <div style="display: flex; align-items: center; padding: 5px; border-bottom: 1px solid #eee;">
-                    <input type="checkbox" name="student_ids[]" value="${student.id}" id="stu_${student.id}" style="margin-right: 10px; width: auto;" />
-                    <label for="stu_${student.id}" style="margin: 0; flex-grow: 1; font-weight: normal; cursor: pointer;">
-                        <strong>${student.fullname}</strong> (${student.school_id})
-                    </label>
-                </div>
-            `;
-        });
-        containerElement.innerHTML = html;
-        document.getElementById('finalEnrollBtn').disabled = false;
-    }
+            if (data.status === 'success') {
+                renderUnassignedStudentCheckboxes(data.students, studentListContainer);
+            } else {
+                studentListContainer.innerHTML = `<p style="margin: 0; color: #dc3545;">Error: ${data.message || 'Server error.'}</p>`;
+            }
+        } catch (error) {
+            studentListContainer.innerHTML = '<p style="margin: 0; color: #dc3545;">Network error fetching student data.</p>';
+        }
+    }
+    
+    function renderUnassignedStudentCheckboxes(students, containerElement) {
+        if (!students || students.length === 0) {
+            containerElement.innerHTML = '<p style="margin: 0; color: #666;">No unassigned students found for this grade level or matching your search.</p>';
+            document.getElementById('finalEnrollBtn').disabled = true;
+            return;
+        }
 
+        let html = '';
+        students.forEach(student => {
+            html += `
+                <div style="display: flex; align-items: center; padding: 5px; border-bottom: 1px solid #eee;">
+                    <input type="checkbox" name="student_ids[]" value="${student.id}" id="stu_${student.id}" style="margin-right: 10px; width: auto;" />
+                    <label for="stu_${student.id}" style="margin: 0; flex-grow: 1; font-weight: normal; cursor: pointer;">
+                        <strong>${student.fullname}</strong> (${student.school_id})
+                    </label>
+                </div>
+            `;
+        });
+        containerElement.innerHTML = html;
+        document.getElementById('finalEnrollBtn').disabled = false;
+    }
 
-    // --- Core Initialization on Load ---
-    document.addEventListener('DOMContentLoaded', function() {
-        
-        // 1. Setup the "View Students" button state (they start hidden)
-        document.querySelectorAll('.viewStudentsBtn').forEach(btn => {
-             btn.textContent = 'View Students';
-             btn.style.background = '#17a2b8';
-        });
-        
-        // 2. Filter the main table by the initial grade level (G7)
-        filterByGrade(activeGrade);
-    });
+    /** Submits the selected students for enrollment into the target section. */
+    document.getElementById('enrollmentForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('finalEnrollBtn');
+        btn.disabled = true;
+        btn.textContent = 'Enrolling...';
 
-    // --- Sidebar Click Handler (Executed when clicking a Grade Level in the sidebar) ---
-    function filterByGrade(targetGrade) {
-        activeGrade = targetGrade;
+        const sectionId = document.getElementById('enroll_section_id').value;
+        const academicYear = CURRENT_ACADEMIC_YEAR;
+        const form = new FormData(document.getElementById('enrollmentForm'));
 
-        // 1. Filter Enrolled Sections Table
-        document.querySelectorAll('.grade-segment').forEach(segment => {
-            if (parseInt(segment.dataset.grade) === targetGrade) {
-                segment.style.display = 'block';
-            } else {
-                segment.style.display = 'none';
-            }
-        });
-    }
+        // Check if any checkboxes are selected
+        const selectedStudents = form.getAll('student_ids[]');
+        if (selectedStudents.length === 0) {
+            Swal.fire('Error', 'Please select at least one student to enroll.', 'warning');
+            btn.disabled = false;
+            btn.textContent = 'Enroll Selected Students';
+            return;
+        }
 
-    // --- Table Action Delegation ---
-    document.querySelector('.sections-container').addEventListener('click', function(e) {
-        const viewBtn = e.target.closest('.viewStudentsBtn');
-        const enrollBtn = e.target.closest('.enrollStudentsBtn');
-        
-        if (enrollBtn) {
-            const id = enrollBtn.dataset.id;
-            const grade = enrollBtn.dataset.grade;
-            const name = enrollBtn.dataset.name;
-            openEnrollModal(id, grade, name); // FIXED ACTION
-        }
+        // Add hidden fields to form data
+        form.append('section_id', sectionId);
+        form.append('academic_year', academicYear);
 
-        if (viewBtn) {
-            const id = viewBtn.dataset.id;
-            const detailsRow = document.getElementById('students_' + id);
-            const container = detailsRow.querySelector('.student-list-container');
-            
-            // Toggle visibility
-            const isHidden = detailsRow.style.display === 'none';
+        try {
+            const res = await fetch('process_enrollment.php', { 
+                method: 'POST',
+                body: form
+            });
+            const data = await res.json();
 
-            if (isHidden) {
-                loadStudentsForSection(id, container);
-                detailsRow.style.display = 'table-row';
-                viewBtn.textContent = 'Hide Students';
-                viewBtn.style.background = '#ffc107'; 
-            } else {
-                detailsRow.style.display = 'none';
-                viewBtn.textContent = 'View Students';
-                viewBtn.style.background = '#17a2b8';
-            }
-        }
-        // ... (rest of the listeners for editBtn, deleteBtn follow here) ...
-    });
+            closeEnrollModal();
+            Swal.fire({
+                icon: data.status === 'success' ? 'success' : 'error',
+                title: data.status === 'success' ? 'Enrollment Complete!' : 'Enrollment Failed',
+                text: data.message,
+            }).then(() => {
+                // FIX 1: If successful, force reload of the enrolled list for the section immediately.
+                if (data.status === 'success') {
+                    const detailsRow = document.getElementById('students_' + sectionId);
+                    const container = detailsRow.querySelector('.student-list-container');
+                    const viewBtn = document.querySelector(`button.viewStudentsBtn[data-id="${sectionId}"]`);
+                    
+                    // Ensure row is visible and reload content
+                    detailsRow.style.display = 'table-row';
+                    if (viewBtn) {
+                        viewBtn.textContent = 'Hide Students';
+                        viewBtn.style.background = '#ffc107';
+                    }
+                    loadStudentsForSection(sectionId, container);
+                }
+                
+                // FIX 2: Reload the entire page to update the unassigned list when modal is opened next time.
+                loadPage('manage_sections.php?grade=' + activeGrade);
+            });
+
+        } catch (error) {
+            closeEnrollModal();
+            Swal.fire('Error', 'Network error during enrollment.', 'error');
+        }
+    });
+
+    // Student search filter inside the modal
+    document.getElementById('studentSearchInput').addEventListener('input', (e) => {
+        const gradeLevel = document.getElementById('enroll_grade_level').value;
+        const query = e.target.value;
+        fetchUnassignedStudents(gradeLevel, query);
+    });
+    
+    // --- Existing Functions for Sections Table (View Students) ---
+    
+    function renderStudentList(students, containerElement) {
+        if (!students || students.length === 0) {
+            containerElement.innerHTML = '<p style="margin: 0; color: #666;">No students enrolled in this section for ' + CURRENT_ACADEMIC_YEAR + '.</p>';
+            return;
+        }
+
+        let html = '<h4>Enrolled Students (' + students.length + ')</h4>';
+        html += '<table class="inner-student-table">';
+        html += '<thead style="background:#e0e0e0; color:#333;"><tr><th>School ID</th><th>Full Name</th></tr></thead><tbody>';
+        
+        students.forEach(student => {
+            html += `<tr>
+                        <td style="width: 30%;">${student.school_id}</td>
+                        <td style="width: 70%;">${student.fullname}</td>
+                    </tr>`;
+        });
+
+        html += '</tbody></table>';
+        containerElement.innerHTML = html;
+    }
+
+    async function loadStudentsForSection(sectionId, container) {
+        container.innerHTML = '<p style="margin: 0; color: #007bff;">Loading Students...</p>';
+        
+        try {
+            const url = 'get_students_for_section.php?id=' + sectionId + '&ay=' + CURRENT_ACADEMIC_YEAR;
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            if (data.status === 'success') {
+                renderStudentList(data.students, container);
+            } else {
+                container.innerHTML = '<p style="margin: 0; color: #dc3545;">Error fetching students: ' + (data.message || 'Server error.') + '</p>';
+            }
+
+        } catch (error) {
+            container.innerHTML = '<p style="margin: 0; color: #dc3545;">Network error: Unable to load data.</p>';
+        }
+    }
+
+    document.querySelectorAll('.sectionsTable').forEach(table => {
+        table.addEventListener('click', function(e) {
+            const viewBtn = e.target.closest('.viewStudentsBtn');
+            const enrollBtn = e.target.closest('.enrollStudentsBtn');
+            const editBtn = e.target.closest('.editSectionBtn');
+            const deleteBtn = e.target.closest('.deleteSectionBtn');
+            
+            if (enrollBtn) {
+                const id = enrollBtn.dataset.id;
+                const grade = enrollBtn.dataset.grade;
+                const name = enrollBtn.dataset.name;
+                openEnrollModal(id, grade, name);
+            }
+
+            if (viewBtn) {
+                const id = viewBtn.dataset.id;
+                const detailsRow = document.getElementById('students_' + id);
+                const container = detailsRow.querySelector('.student-list-container');
+                
+                // Toggle visibility
+                const isHidden = detailsRow.style.display === 'none';
+
+                if (isHidden) {
+                    loadStudentsForSection(id, container);
+                    detailsRow.style.display = 'table-row';
+                    viewBtn.textContent = 'Hide Students';
+                    viewBtn.style.background = '#ffc107'; 
+                } else {
+                    detailsRow.style.display = 'none';
+                    viewBtn.textContent = 'View Students';
+                    viewBtn.style.background = '#17a2b8';
+                }
+            }
+            
+            if (editBtn) {
+                const id = editBtn.dataset.id;
+                Swal.fire('Edit Function', 'Ready to edit Section ID: ' + id, 'info'); 
+            }
+
+            if (deleteBtn) {
+                const id = deleteBtn.dataset.id;
+                 Swal.fire({
+                    title: "Delete Section?",
+                    text: "Are you sure you want to delete Section ID " + id + "?",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#dc3545",
+                    cancelButtonColor: "#6c757d",
+                    confirmButtonText: "Yes, delete it!"
+                }).then(result => {
+                    if (result.isConfirmed) {
+                        Swal.fire('Deleting...', 'Deleting Section ' + id, 'info');
+                    }
+                });
+            }
+        });
+    });
+
 </script>
 <?php $conn->close(); ?>
