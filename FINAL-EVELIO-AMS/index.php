@@ -89,10 +89,7 @@ if(isset($_POST['login'])){
             <div class="auth-card">
                 <div class="auth-logo">
                     <div class="auth-logo-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-                            <path d="M6 12v5c3 3 9 3 12 0v-5"/>
-                        </svg>
+                        <img src="assets/images/school-logo.png" alt="School Logo" style="width: 80px; height: 80px; object-fit: contain;">
                     </div>
                     <div class="auth-logo-text">Evelio AMS</div>
                     <div class="auth-logo-subtext">Academic Management System</div>

@@ -8,10 +8,7 @@ $user_initials = strtoupper(substr($user_email, 0, 2));
     <div class="sidebar-header">
         <a href="<?php echo $user_role === 'admin' ? 'admin_dashboard.php' : ($user_role === 'teacher' ? 'teacher_dashboard.php' : 'student_dashboard.php'); ?>" class="sidebar-logo">
             <div class="sidebar-logo-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-                    <path d="M6 12v5c3 3 9 3 12 0v-5"/>
-                </svg>
+                <img src="assets/images/school-logo.png" alt="School Logo" style="width: 50px; height: 50px; object-fit: contain;">
             </div>
             <div class="sidebar-logo-text">
                 Evelio AMS
