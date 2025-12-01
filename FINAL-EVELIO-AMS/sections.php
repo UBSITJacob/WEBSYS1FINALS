@@ -3,6 +3,15 @@ include "session.php";
 require_login();
 if($_SESSION['role']!=='admin'){ header('Location: index.php'); exit; }
 
+$db_available = false;
+try {
+    include "pdo_functions.php";
+    $pdoC = new pdoCRUD();
+    $db_available = true;
+} catch(Exception $e) {
+    $db_available = false;
+}
+
 $page_title = 'Sections';
 $breadcrumb = [
     ['title' => 'Sections', 'active' => true]
@@ -184,15 +193,60 @@ $breadcrumb = [
 </div>
 
 <script>
+    const demoMode = <?php echo $db_available ? 'false' : 'true'; ?>;
     let page = 1, limit = 10, q = "", sort = 'grade_level', dir = 'ASC', grade = '', dept = '', confirmCb = null;
     
+    function getDemoSectionsHtml() {
+        const demoSections = [
+            { id: 1, name: 'Einstein', grade: 'Grade 7', dept: 'JHS', strand: '', capacity: 40, enrolled: 35, adviser: 'Maria Santos' },
+            { id: 2, name: 'Newton', grade: 'Grade 8', dept: 'JHS', strand: '', capacity: 40, enrolled: 38, adviser: 'Jose Reyes' },
+            { id: 3, name: 'Galileo', grade: 'Grade 9', dept: 'JHS', strand: '', capacity: 35, enrolled: 32, adviser: 'Ana Garcia' },
+            { id: 4, name: 'Darwin', grade: 'Grade 10', dept: 'JHS', strand: '', capacity: 40, enrolled: 28, adviser: '' },
+            { id: 5, name: 'Einstein', grade: 'Grade 11', dept: 'SHS', strand: 'STEM', capacity: 45, enrolled: 42, adviser: 'Lucia Mendoza' },
+            { id: 6, name: 'Newton', grade: 'Grade 11', dept: 'SHS', strand: 'HUMSS', capacity: 40, enrolled: 36, adviser: '' },
+            { id: 7, name: 'Galileo', grade: 'Grade 12', dept: 'SHS', strand: 'STEM', capacity: 40, enrolled: 30, adviser: 'Pedro Cruz' }
+        ];
+        
+        let html = '<div class="demo-notice" style="background: linear-gradient(135deg, #fef3c7, #fde68a); border-left: 4px solid #f59e0b; padding: 12px 16px; margin-bottom: 16px; border-radius: 8px;"><strong style="color: #92400e;">Demo Mode</strong><span style="color: #92400e;"> - Showing sample section data</span></div>';
+        html += '<table class="table"><thead><tr><th>Section Name</th><th>Grade Level</th><th>Department</th><th>Strand</th><th>Capacity</th><th>Enrolled</th><th>Adviser</th><th>Actions</th></tr></thead><tbody>';
+        
+        demoSections.forEach(s => {
+            const usagePercent = Math.round((s.enrolled / s.capacity) * 100);
+            const usageColor = usagePercent >= 90 ? 'danger' : (usagePercent >= 70 ? 'warning' : 'success');
+            html += `<tr>
+                <td><strong>${s.name}</strong></td>
+                <td>${s.grade}</td>
+                <td><span class="badge badge-${s.dept === 'JHS' ? 'primary' : 'info'}">${s.dept}</span></td>
+                <td>${s.strand || '-'}</td>
+                <td>${s.capacity}</td>
+                <td><span class="badge badge-${usageColor}">${s.enrolled}/${s.capacity}</span></td>
+                <td>${s.adviser || '<span class="text-muted">Unassigned</span>'}</td>
+                <td>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-primary" onclick="alert('Demo mode - Edit disabled')">Edit</button>
+                        <button class="btn btn-sm btn-danger" onclick="alert('Demo mode - Delete disabled')">Delete</button>
+                    </div>
+                </td>
+            </tr>`;
+        });
+        
+        html += '</tbody></table>';
+        html += '<div class="pagination"><span class="text-muted">Showing 7 demo records</span></div>';
+        return html;
+    }
+    
     function loadSections() {
+        if(demoMode) {
+            document.getElementById('list').innerHTML = getDemoSectionsHtml();
+            return;
+        }
         let url = 'getSections.php?q=' + encodeURIComponent(q) + '&page=' + page + '&limit=' + limit + '&sort=' + encodeURIComponent(sort) + '&dir=' + encodeURIComponent(dir);
         if(grade) url += '&grade=' + encodeURIComponent(grade);
         if(dept) url += '&dept=' + encodeURIComponent(dept);
         fetch(url)
             .then(r => r.text())
-            .then(html => { document.getElementById('list').innerHTML = html; });
+            .then(html => { document.getElementById('list').innerHTML = html; })
+            .catch(() => { document.getElementById('list').innerHTML = getDemoSectionsHtml(); });
     }
     
     function searchInput(v) { q = v.trim(); page = 1; loadSections(); }

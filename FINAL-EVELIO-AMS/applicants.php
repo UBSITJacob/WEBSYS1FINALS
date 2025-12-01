@@ -3,6 +3,15 @@ include "session.php";
 require_login();
 if($_SESSION['role']!=='admin'){ header('Location: index.php'); exit; }
 
+$db_available = false;
+try {
+    include "pdo_functions.php";
+    $pdoC = new pdoCRUD();
+    $db_available = true;
+} catch(Exception $e) {
+    $db_available = false;
+}
+
 $page_title = 'Applicants';
 $breadcrumb = [
     ['title' => 'Applicants', 'active' => true]
@@ -97,15 +106,56 @@ $breadcrumb = [
 </div>
 
 <script>
+    const demoMode = <?php echo $db_available ? 'false' : 'true'; ?>;
     let page = 1, limit = 10, q = "", sort = 'created_at', dir = 'DESC', status = '', confirmCb = null;
     
+    function getDemoApplicantsHtml() {
+        const demoApplicants = [
+            { id: 1, lrn: '123456789001', name: 'Ana Marie Santos', grade: 'Grade 7', strand: '', status: 'pending', date: '2024-11-28' },
+            { id: 2, lrn: '123456789002', name: 'Juan Carlos Cruz', grade: 'Grade 8', strand: '', status: 'pending', date: '2024-11-27' },
+            { id: 3, lrn: '123456789003', name: 'Maria Clara Reyes', grade: 'Grade 11', strand: 'STEM', status: 'approved', date: '2024-11-25' },
+            { id: 4, lrn: '123456789004', name: 'Jose Rizal Jr.', grade: 'Grade 11', strand: 'HUMSS', status: 'pending', date: '2024-11-24' },
+            { id: 5, lrn: '123456789005', name: 'Gabriela Silang', grade: 'Grade 9', strand: '', status: 'declined', date: '2024-11-23' }
+        ];
+        
+        let html = '<div class="demo-notice" style="background: linear-gradient(135deg, #fef3c7, #fde68a); border-left: 4px solid #f59e0b; padding: 12px 16px; margin-bottom: 16px; border-radius: 8px;"><strong style="color: #92400e;">Demo Mode</strong><span style="color: #92400e;"> - Showing sample applicant data</span></div>';
+        html += '<table class="table"><thead><tr><th>LRN</th><th>Name</th><th>Grade Level</th><th>Strand</th><th>Status</th><th>Applied</th><th>Actions</th></tr></thead><tbody>';
+        
+        demoApplicants.forEach(a => {
+            const statusClass = a.status === 'pending' ? 'warning' : (a.status === 'approved' ? 'success' : 'danger');
+            html += `<tr>
+                <td><span class="font-mono">${a.lrn}</span></td>
+                <td><strong>${a.name}</strong></td>
+                <td>${a.grade}</td>
+                <td>${a.strand || '-'}</td>
+                <td><span class="badge badge-${statusClass}">${a.status.charAt(0).toUpperCase() + a.status.slice(1)}</span></td>
+                <td>${a.date}</td>
+                <td>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline" onclick="alert('Demo mode - View disabled')">View</button>
+                        ${a.status === 'pending' ? `<button class="btn btn-sm btn-success" onclick="alert('Demo mode - Approve disabled')">Approve</button>
+                        <button class="btn btn-sm btn-danger" onclick="alert('Demo mode - Decline disabled')">Decline</button>` : ''}
+                    </div>
+                </td>
+            </tr>`;
+        });
+        
+        html += '</tbody></table>';
+        html += '<div class="pagination"><span class="text-muted">Showing 5 demo records</span></div>';
+        return html;
+    }
+    
     function loadApplicants() {
+        if(demoMode) {
+            document.getElementById('list').innerHTML = getDemoApplicantsHtml();
+            return;
+        }
         let url = "getApplicants.php?q=" + encodeURIComponent(q) + "&page=" + page + "&limit=" + limit + "&sort=" + encodeURIComponent(sort) + "&dir=" + encodeURIComponent(dir);
         if(status) url += "&status=" + encodeURIComponent(status);
         fetch(url)
             .then(r => r.text())
             .then(html => { document.getElementById('list').innerHTML = html; })
-            .catch(() => { document.getElementById('list').innerHTML = '<div class="text-center p-6 text-muted">Error loading data</div>'; });
+            .catch(() => { document.getElementById('list').innerHTML = getDemoApplicantsHtml(); });
     }
     
     function searchInput(v) { q = v.trim(); page = 1; loadApplicants(); }

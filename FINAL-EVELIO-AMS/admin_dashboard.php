@@ -5,9 +5,17 @@ if($_SESSION['role'] !== 'admin') {
     header('Location: index.php'); 
     exit; 
 }
-include "dbconfig.php";
 
 $page_title = 'Dashboard';
+$db_available = false;
+$pdo = null;
+
+try {
+    include "dbconfig.php";
+    $db_available = isset($pdo) && $pdo !== null;
+} catch(Exception $e) {
+    $db_available = false;
+}
 
 $total_students = 0;
 $total_teachers = 0;
@@ -17,28 +25,39 @@ $enrolled_this_year = 0;
 $by_grade = [];
 $by_strand = [];
 
-try {
-    $total_students = (int)$pdo->query("SELECT COUNT(*) c FROM students")->fetch()['c'];
-    $total_teachers = (int)$pdo->query("SELECT COUNT(*) c FROM teachers")->fetch()['c'];
-    $pending_applicants = (int)$pdo->query("SELECT COUNT(*) c FROM applicants WHERE status='pending'")->fetch()['c'];
-    $total_sections = (int)$pdo->query("SELECT COUNT(*) c FROM sections")->fetch()['c'];
-    $enrolled_this_year = (int)$pdo->query("SELECT COUNT(*) c FROM enrollments WHERE school_year = YEAR(CURDATE())")->fetch()['c'];
-    $by_grade = $pdo->query("SELECT grade_level, COUNT(*) c FROM students GROUP BY grade_level ORDER BY grade_level")->fetchAll();
-    $by_strand = $pdo->query("SELECT strand, COUNT(*) c FROM students WHERE strand IS NOT NULL GROUP BY strand")->fetchAll();
-} catch(Exception $e) {
-    $total_students = 5;
-    $total_teachers = 2;
-    $pending_applicants = 3;
-    $total_sections = 3;
-    $enrolled_this_year = 12;
+if($db_available) {
+    try {
+        $total_students = (int)$pdo->query("SELECT COUNT(*) c FROM students")->fetch()['c'];
+        $total_teachers = (int)$pdo->query("SELECT COUNT(*) c FROM teachers")->fetch()['c'];
+        $pending_applicants = (int)$pdo->query("SELECT COUNT(*) c FROM applicants WHERE status='pending'")->fetch()['c'];
+        $total_sections = (int)$pdo->query("SELECT COUNT(*) c FROM sections")->fetch()['c'];
+        $enrolled_this_year = (int)$pdo->query("SELECT COUNT(*) c FROM enrollments WHERE school_year = YEAR(CURDATE())")->fetch()['c'];
+        $by_grade = $pdo->query("SELECT grade_level, COUNT(*) c FROM students GROUP BY grade_level ORDER BY grade_level")->fetchAll();
+        $by_strand = $pdo->query("SELECT strand, COUNT(*) c FROM students WHERE strand IS NOT NULL GROUP BY strand")->fetchAll();
+    } catch(Exception $e) {
+        $db_available = false;
+    }
+}
+
+if(!$db_available) {
+    $total_students = 156;
+    $total_teachers = 24;
+    $pending_applicants = 8;
+    $total_sections = 12;
+    $enrolled_this_year = 142;
     $by_grade = [
-        ['grade_level' => 'Grade 7', 'c' => 2],
-        ['grade_level' => 'Grade 8', 'c' => 1],
-        ['grade_level' => 'Grade 11', 'c' => 2]
+        ['grade_level' => 'Grade 7', 'c' => 32],
+        ['grade_level' => 'Grade 8', 'c' => 28],
+        ['grade_level' => 'Grade 9', 'c' => 26],
+        ['grade_level' => 'Grade 10', 'c' => 24],
+        ['grade_level' => 'Grade 11', 'c' => 25],
+        ['grade_level' => 'Grade 12', 'c' => 21]
     ];
     $by_strand = [
-        ['strand' => 'HUMSS', 'c' => 1],
-        ['strand' => 'TVL', 'c' => 1]
+        ['strand' => 'HUMSS', 'c' => 18],
+        ['strand' => 'STEM', 'c' => 15],
+        ['strand' => 'ABM', 'c' => 8],
+        ['strand' => 'TVL', 'c' => 5]
     ];
 }
 

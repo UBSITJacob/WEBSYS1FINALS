@@ -1,28 +1,46 @@
 <?php
 include "session.php";
-include "pdo_functions.php";
 require_login();
 
 $page_title = 'Change Password';
-$pdoC = new pdoCRUD();
+$db_available = false;
+$pdoC = null;
+
+try {
+    include "pdo_functions.php";
+    $pdoC = new pdoCRUD();
+    $db_available = true;
+} catch(Exception $e) {
+    $db_available = false;
+}
+
 $success = false;
 $error = '';
+$demo_mode = !$db_available;
 
 if(isset($_POST['change'])){
-    $current = $_POST['current_password'] ?? '';
-    $new = $_POST['new_password'] ?? '';
-    $confirm = $_POST['confirm_password'] ?? '';
-    
-    if(strlen($new) < 8){
-        $error = "New password must be at least 8 characters long.";
-    } elseif($new !== $confirm){
-        $error = "New passwords do not match.";
+    if($demo_mode) {
+        $error = "Demo Mode: Password changes are disabled. Connect a database to enable this feature.";
     } else {
-        $ok = $pdoC->changePassword($_SESSION['account_id'],$current,$new);
-        if($ok){
-            $success = true;
+        $current = $_POST['current_password'] ?? '';
+        $new = $_POST['new_password'] ?? '';
+        $confirm = $_POST['confirm_password'] ?? '';
+        
+        if(strlen($new) < 8){
+            $error = "New password must be at least 8 characters long.";
+        } elseif($new !== $confirm){
+            $error = "New passwords do not match.";
         } else {
-            $error = "Invalid current password. Please try again.";
+            try {
+                $ok = $pdoC->changePassword($_SESSION['account_id'],$current,$new);
+                if($ok){
+                    $success = true;
+                } else {
+                    $error = "Invalid current password. Please try again.";
+                }
+            } catch(Exception $e) {
+                $error = "Database error. Please try again later.";
+            }
         }
     }
 }

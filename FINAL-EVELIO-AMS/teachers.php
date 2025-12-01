@@ -3,6 +3,15 @@ include "session.php";
 require_login();
 if($_SESSION['role']!=='admin'){ header('Location: index.php'); exit; }
 
+$db_available = false;
+try {
+    include "pdo_functions.php";
+    $pdoC = new pdoCRUD();
+    $db_available = true;
+} catch(Exception $e) {
+    $db_available = false;
+}
+
 $page_title = 'Teachers';
 $breadcrumb = [
     ['title' => 'Teachers', 'active' => true]
@@ -186,14 +195,54 @@ $breadcrumb = [
 </div>
 
 <script>
+    const demoMode = <?php echo $db_available ? 'false' : 'true'; ?>;
     let page = 1, limit = 10, q = "", sort = 'full_name', dir = 'ASC', status = '', confirmCb = null;
     
+    function getDemoTeachersHtml() {
+        const demoTeachers = [
+            { id: 1, fid: 'FAC-2024-001', name: 'Maria Santos', email: 'msantos@school.edu', sex: 'Female', active: true, advisory: 'Einstein (Grade 7)' },
+            { id: 2, fid: 'FAC-2024-002', name: 'Jose Reyes', email: 'jreyes@school.edu', sex: 'Male', active: true, advisory: 'Newton (Grade 8)' },
+            { id: 3, fid: 'FAC-2024-003', name: 'Ana Garcia', email: 'agarcia@school.edu', sex: 'Female', active: true, advisory: '' },
+            { id: 4, fid: 'FAC-2024-004', name: 'Pedro Cruz', email: 'pcruz@school.edu', sex: 'Male', active: false, advisory: '' },
+            { id: 5, fid: 'FAC-2024-005', name: 'Lucia Mendoza', email: 'lmendoza@school.edu', sex: 'Female', active: true, advisory: 'Galileo (Grade 11)' }
+        ];
+        
+        let html = '<div class="demo-notice" style="background: linear-gradient(135deg, #fef3c7, #fde68a); border-left: 4px solid #f59e0b; padding: 12px 16px; margin-bottom: 16px; border-radius: 8px;"><strong style="color: #92400e;">Demo Mode</strong><span style="color: #92400e;"> - Showing sample teacher data</span></div>';
+        html += '<table class="table"><thead><tr><th>Faculty ID</th><th>Name</th><th>Email</th><th>Sex</th><th>Advisory</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+        
+        demoTeachers.forEach(t => {
+            html += `<tr>
+                <td><span class="font-mono">${t.fid}</span></td>
+                <td><strong>${t.name}</strong></td>
+                <td>${t.email}</td>
+                <td>${t.sex}</td>
+                <td>${t.advisory || '<span class="text-muted">None</span>'}</td>
+                <td><span class="badge badge-${t.active ? 'success' : 'secondary'}">${t.active ? 'Active' : 'Inactive'}</span></td>
+                <td>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-primary" onclick="alert('Demo mode - Edit disabled')">Edit</button>
+                        <button class="btn btn-sm btn-danger" onclick="alert('Demo mode - Delete disabled')">Delete</button>
+                    </div>
+                </td>
+            </tr>`;
+        });
+        
+        html += '</tbody></table>';
+        html += '<div class="pagination"><span class="text-muted">Showing 5 demo records</span></div>';
+        return html;
+    }
+    
     function loadTeachers() {
+        if(demoMode) {
+            document.getElementById('list').innerHTML = getDemoTeachersHtml();
+            return;
+        }
         let url = 'getTeachers.php?q=' + encodeURIComponent(q) + '&page=' + page + '&limit=' + limit + '&sort=' + encodeURIComponent(sort) + '&dir=' + encodeURIComponent(dir);
         if(status !== '') url += '&active=' + encodeURIComponent(status);
         fetch(url)
             .then(r => r.text())
-            .then(html => { document.getElementById('list').innerHTML = html; });
+            .then(html => { document.getElementById('list').innerHTML = html; })
+            .catch(() => { document.getElementById('list').innerHTML = getDemoTeachersHtml(); });
     }
     
     function searchInput(v) { q = v.trim(); page = 1; loadTeachers(); }

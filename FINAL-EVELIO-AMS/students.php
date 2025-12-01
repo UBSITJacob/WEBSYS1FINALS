@@ -3,6 +3,15 @@ include "session.php";
 require_login();
 if($_SESSION['role']!=='admin'){ header('Location: index.php'); exit; }
 
+$db_available = false;
+try {
+    include "pdo_functions.php";
+    $pdoC = new pdoCRUD();
+    $db_available = true;
+} catch(Exception $e) {
+    $db_available = false;
+}
+
 $page_title = 'Students';
 $breadcrumb = [
     ['title' => 'Students', 'active' => true]
@@ -116,15 +125,57 @@ $breadcrumb = [
 </div>
 
 <script>
+    const demoMode = <?php echo $db_available ? 'false' : 'true'; ?>;
     let page = 1, limit = 10, q = "", sort = 'grade_level', dir = 'ASC', grade = '', dept = '', pendingId = 0, confirmCb = null;
     
+    function getDemoStudentsHtml() {
+        const demoStudents = [
+            { id: 1, lrn: '123456789001', name: 'Juan Dela Cruz', grade: 'Grade 7', section: 'Einstein', dept: 'JHS', hasAccount: true },
+            { id: 2, lrn: '123456789002', name: 'Maria Santos', grade: 'Grade 8', section: 'Newton', dept: 'JHS', hasAccount: true },
+            { id: 3, lrn: '123456789003', name: 'Pedro Reyes', grade: 'Grade 9', section: 'Galileo', dept: 'JHS', hasAccount: false },
+            { id: 4, lrn: '123456789004', name: 'Ana Garcia', grade: 'Grade 11', section: 'Einstein', dept: 'SHS', hasAccount: true },
+            { id: 5, lrn: '123456789005', name: 'Jose Rizal Jr.', grade: 'Grade 11', section: 'Newton', dept: 'SHS', hasAccount: false },
+            { id: 6, lrn: '123456789006', name: 'Gabriela Silang', grade: 'Grade 12', section: 'Galileo', dept: 'SHS', hasAccount: true }
+        ];
+        
+        let html = '<div class="demo-notice" style="background: linear-gradient(135deg, #fef3c7, #fde68a); border-left: 4px solid #f59e0b; padding: 12px 16px; margin-bottom: 16px; border-radius: 8px;"><strong style="color: #92400e;">Demo Mode</strong><span style="color: #92400e;"> - Showing sample student data</span></div>';
+        html += '<table class="table"><thead><tr><th>LRN</th><th>Name</th><th>Grade Level</th><th>Section</th><th>Department</th><th>Account</th><th>Actions</th></tr></thead><tbody>';
+        
+        demoStudents.forEach(s => {
+            html += `<tr>
+                <td><span class="font-mono">${s.lrn}</span></td>
+                <td><strong>${s.name}</strong></td>
+                <td>${s.grade}</td>
+                <td>${s.section}</td>
+                <td><span class="badge badge-${s.dept === 'JHS' ? 'primary' : 'info'}">${s.dept}</span></td>
+                <td>${s.hasAccount ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-secondary">None</span>'}</td>
+                <td>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline" onclick="alert('Demo mode - View disabled')">View</button>
+                        <button class="btn btn-sm btn-primary" onclick="alert('Demo mode - Edit disabled')">Edit</button>
+                        <button class="btn btn-sm btn-danger" onclick="alert('Demo mode - Delete disabled')">Delete</button>
+                    </div>
+                </td>
+            </tr>`;
+        });
+        
+        html += '</tbody></table>';
+        html += '<div class="pagination"><span class="text-muted">Showing 6 demo records</span></div>';
+        return html;
+    }
+    
     function loadStudents() {
+        if(demoMode) {
+            document.getElementById('list').innerHTML = getDemoStudentsHtml();
+            return;
+        }
         let url = 'getStudents.php?q=' + encodeURIComponent(q) + '&page=' + page + '&limit=' + limit + '&sort=' + encodeURIComponent(sort) + '&dir=' + encodeURIComponent(dir);
         if(grade) url += '&grade=' + encodeURIComponent(grade);
         if(dept) url += '&dept=' + encodeURIComponent(dept);
         fetch(url)
             .then(r => r.text())
-            .then(html => { document.getElementById('list').innerHTML = html; });
+            .then(html => { document.getElementById('list').innerHTML = html; })
+            .catch(() => { document.getElementById('list').innerHTML = getDemoStudentsHtml(); });
     }
     
     function searchInput(v) { q = v.trim(); page = 1; loadStudents(); }
