@@ -1,5 +1,4 @@
 <?php
-include "pdo_functions.php";
 include "session.php";
 
 if(is_logged_in()) {
@@ -14,28 +13,59 @@ if(is_logged_in()) {
     exit;
 }
 
-$pdo = new pdoCRUD();
 $error = '';
+$db_available = false;
+$pdo = null;
+
+try {
+    include "pdo_functions.php";
+    $pdo = new pdoCRUD();
+    $db_available = true;
+} catch(Exception $e) {
+    $db_available = false;
+}
+
+$demo_accounts = [
+    'admin@evelio.edu' => ['id' => 1, 'email' => 'admin@evelio.edu', 'role' => 'admin', 'password' => 'admin123', 'first_login_required' => 0],
+    'teacher@evelio.edu' => ['id' => 2, 'email' => 'teacher@evelio.edu', 'role' => 'teacher', 'password' => 'teacher123', 'first_login_required' => 0],
+    'student@evelio.edu' => ['id' => 3, 'email' => 'student@evelio.edu', 'role' => 'student', 'password' => 'student123', 'first_login_required' => 0],
+];
 
 if(isset($_POST['login'])){
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
-    $user = $pdo->login($email, $password);
-    if($user){
-        login_user($user);
-        if($user['first_login_required']){
-            header('Location: change_password.php');
+    
+    if($db_available && $pdo) {
+        $user = $pdo->login($email, $password);
+        if($user){
+            login_user($user);
+            if($user['first_login_required']){
+                header('Location: change_password.php');
+                exit;
+            }
+            if($user['role'] === 'admin') {
+                header('Location: admin_dashboard.php');
+            } elseif($user['role'] === 'teacher') {
+                header('Location: teacher_dashboard.php');
+            } else {
+                header('Location: student_dashboard.php');
+            }
             exit;
         }
-        if($user['role'] === 'admin') {
+    }
+    
+    if(isset($demo_accounts[$email]) && $demo_accounts[$email]['password'] === $password) {
+        login_user($demo_accounts[$email]);
+        if($demo_accounts[$email]['role'] === 'admin') {
             header('Location: admin_dashboard.php');
-        } elseif($user['role'] === 'teacher') {
+        } elseif($demo_accounts[$email]['role'] === 'teacher') {
             header('Location: teacher_dashboard.php');
         } else {
             header('Location: student_dashboard.php');
         }
         exit;
     }
+    
     $error = "Invalid email or password. Please try again.";
 }
 ?>
@@ -132,6 +162,25 @@ if(isset($_POST['login'])){
                     </svg>
                     Apply as New Student
                 </a>
+                
+                <?php if(!$db_available): ?>
+                <div class="alert alert-info mb-4 mt-4">
+                    <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    <div class="alert-content">
+                        <div class="alert-title">Demo Mode Active</div>
+                        <div class="text-sm">
+                            Use these demo accounts to explore:<br>
+                            <strong>Admin:</strong> admin@evelio.edu / admin123<br>
+                            <strong>Teacher:</strong> teacher@evelio.edu / teacher123<br>
+                            <strong>Student:</strong> student@evelio.edu / student123
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
                 
                 <div class="auth-footer">
                     <p class="text-muted text-sm mt-8">Evelio Academic Management System</p>

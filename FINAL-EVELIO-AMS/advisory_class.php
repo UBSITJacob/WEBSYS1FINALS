@@ -3,141 +3,321 @@ include "pdo_functions.php";
 include "session.php";
 require_login();
 if($_SESSION['role']!=='teacher'){ header('Location: index.php'); exit; }
+
 $crud = new pdoCRUD();
 $acc = $crud->getAccountById($_SESSION['account_id']);
 $teacher = $crud->getAccountPerson('teacher',$acc['person_id']);
+
 $q = $_GET['q'] ?? '';
 $sort = $_GET['sort'] ?? 'family_name';
 $dir = $_GET['dir'] ?? 'ASC';
 $page = max(1,(int)($_GET['page'] ?? 1));
 $limit = max(1,min(50,(int)($_GET['limit'] ?? 10)));
+
 $rows = $crud->getAdvisoryStudentsForTeacher($acc['person_id'],$q,$page,$limit,$sort,$dir);
 $total = $crud->countAdvisoryStudentsForTeacher($acc['person_id'],$q);
+$totalPages = max(1, ceil($total / $limit));
+
 $section_id = (int)($teacher['advisory_section_id'] ?? 0);
-$loads = $section_id? $crud->getTeacherLoadsForSection($acc['person_id'],$section_id) : [];
-$selected = (int)($_GET['load_id'] ?? 0);
-$date = $_GET['date'] ?? date('Y-m-d');
-$enrolled = $selected? $crud->getEnrollmentsByLoad($selected) : [];
-$enMap = [];
-foreach($enrolled as $e){ $enMap[$e['id']] = $e['enrollment_id']; }
-$gradeMap = [];
-$attendanceMap = [];
-if($selected){
-    $grades = $crud->getGradesForLoad($selected);
-    foreach($grades as $g){ $gradeMap[(int)$g['enrollment_id']] = $g['grade']; }
-    $att = $crud->getAttendanceForLoadAndDate($selected,$date);
-    foreach($att as $a){ $attendanceMap[(int)$a['student_id']] = $a['status']; }
-}
+$section_name = $teacher['section_name'] ?? 'Advisory Class';
+
+$page_title = 'Advisory Class';
+$breadcrumb = [
+    ['title' => 'Dashboard', 'url' => 'teacher_dashboard.php'],
+    ['title' => 'Advisory Class', 'active' => true]
+];
 ?>
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Advisory Class</title>
-    <style>
-        body{font-family: Arial, sans-serif;}
-        .container{max-width:1000px;margin:20px auto;}
-        table{width:100%;border-collapse:collapse;margin-top:10px;}
-        th,td{border:1px solid #ddd;padding:8px;}
-        tr:hover{background:#F0F0F0;cursor:pointer;}
-        .pager{margin-top:10px;display:flex;gap:6px;align-items:center;}
-        .modal{position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;}
-        .modal .box{background:#fff;padding:16px;border-radius:8px;max-width:420px;width:90%;}
-    </style>
-    <script>
-        let page=<?php echo (int)$page; ?>, limit=<?php echo (int)$limit; ?>, q="<?php echo htmlspecialchars($q,ENT_QUOTES,'UTF-8'); ?>", sort="<?php echo htmlspecialchars($sort,ENT_QUOTES,'UTF-8'); ?>", dir="<?php echo htmlspecialchars($dir,ENT_QUOTES,'UTF-8'); ?>";
-        function selectLoad(){ const id = document.getElementById('load').value; const d = document.getElementById('date').value; const url = new URL(window.location.href); url.searchParams.set('load_id', id); url.searchParams.set('date', d); window.location.href = url.toString(); }
-        function setSort(s){ dir = (sort===s && dir==='ASC')? 'DESC':'ASC'; sort=s; reload(); }
-        function searchInput(v){ q=v.trim(); page=1; reload(); }
-        function prev(){ if(page>1){ page--; reload(); } }
-        function next(){ page++; reload(); }
-        function reload(){ window.location.href = 'advisory_class.php?q='+encodeURIComponent(q)+'&sort='+encodeURIComponent(sort)+'&dir='+encodeURIComponent(dir)+'&page='+page+'&limit='+limit; }
-        function openModal(title, body){ document.getElementById('m_title').innerText=title; document.getElementById('m_body').innerText=body; document.getElementById('modal').style.display='flex'; }
-        function closeModal(){ document.getElementById('modal').style.display='none'; }
-        function saveGrade(eid){ const g = prompt('Enter grade:'); if(g===null) return; fetch('saveGrade.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'enrollment_id='+eid+'&grade='+encodeURIComponent(g)}).then(r=>r.json()).then(j=>{ alert(j.success? 'Saved':'Failed'); }); }
-        function saveAttendance(sid){ const d = document.getElementById('date').value; const lid = document.getElementById('load').value; const st = document.getElementById('att_'+sid).value; fetch('saveAttendance.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'student_id='+sid+'&subject_load_id='+lid+'&date='+encodeURIComponent(d)+'&status='+encodeURIComponent(st)}).then(r=>r.json()).then(j=>{ alert(j.success? 'Saved':'Failed'); }); }
-    </script>
-</head>
-<body>
-<div class="container">
-    <h3>Advisory Class</h3>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
-        <div>
-            <label>Subject Load</label>
-            <select id="load" onchange="selectLoad()">
-                <option value="0">Select load</option>
-                <?php foreach($loads as $l){ $label = htmlspecialchars(($l['subject_code']??'').' - '.($l['subject_name']??''),ENT_QUOTES,'UTF-8'); echo '<option value="'.$l['id'].'"'.($selected==$l['id']?' selected':'').'>'.$label.'</option>'; } ?>
-            </select>
-        </div>
-        <div>
-            <label>Date</label>
-            <input id="date" type="date" value="<?php echo htmlspecialchars($date,ENT_QUOTES,'UTF-8'); ?>" onchange="selectLoad()">
-        </div>
-        <div>
-            <label>Search</label>
-            <input type="text" placeholder="Search name or LRN" oninput="searchInput(this.value)">
-        </div>
+<?php include "includes/header.php"; ?>
+<div class="app-layout">
+    <?php include "includes/sidebar.php"; ?>
+    
+    <div class="main-wrapper">
+        <?php include "includes/topbar.php"; ?>
+        
+        <main class="main-content">
+            <div class="page-header">
+                <div class="page-header-row">
+                    <div>
+                        <h1 class="page-header-title"><?php echo htmlspecialchars($section_name, ENT_QUOTES, 'UTF-8'); ?></h1>
+                        <p class="page-header-subtitle">Advisory Class - <?php echo (int)$total; ?> Students</p>
+                    </div>
+                    <div class="page-header-actions">
+                        <button onclick="exportToPDF()" class="btn btn-secondary">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                            </svg>
+                            Export PDF
+                        </button>
+                        <button onclick="window.print()" class="btn btn-primary">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                                <rect x="6" y="14" width="12" height="8"></rect>
+                            </svg>
+                            Print
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-between align-center flex-wrap gap-4">
+                        <h3 class="card-title">Student List</h3>
+                        <div class="search-filter-bar" style="margin-bottom: 0;">
+                            <div class="search-input-wrapper">
+                                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                </svg>
+                                <input type="text" class="form-control" placeholder="Search by name or LRN..." value="<?php echo htmlspecialchars($q, ENT_QUOTES, 'UTF-8'); ?>" onkeyup="handleSearch(this.value)">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-container">
+                        <table class="table" id="studentTable">
+                            <thead>
+                                <tr>
+                                    <th onclick="setSort('lrn')" class="sortable">
+                                        LRN
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sort-icon">
+                                            <path d="M7 15l5 5 5-5M7 9l5-5 5 5"/>
+                                        </svg>
+                                    </th>
+                                    <th onclick="setSort('family_name')" class="sortable">
+                                        Name
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sort-icon">
+                                            <path d="M7 15l5 5 5-5M7 9l5-5 5 5"/>
+                                        </svg>
+                                    </th>
+                                    <th onclick="setSort('sex')" class="sortable">
+                                        Sex
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sort-icon">
+                                            <path d="M7 15l5 5 5-5M7 9l5-5 5 5"/>
+                                        </svg>
+                                    </th>
+                                    <th onclick="setSort('grade_level')" class="sortable">
+                                        Grade Level
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sort-icon">
+                                            <path d="M7 15l5 5 5-5M7 9l5-5 5 5"/>
+                                        </svg>
+                                    </th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if(!$rows): ?>
+                                <tr>
+                                    <td colspan="6" class="text-center p-6">
+                                        <div class="empty-state-inline">
+                                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted mb-3">
+                                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                                <circle cx="9" cy="7" r="4"></circle>
+                                                <line x1="23" y1="11" x2="17" y2="11"></line>
+                                            </svg>
+                                            <p class="text-muted mb-0">No students found in your advisory class</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <?php else: ?>
+                                <?php foreach($rows as $r): ?>
+                                <tr>
+                                    <td>
+                                        <span class="font-medium"><?php echo htmlspecialchars($r['lrn'] ?? '', ENT_QUOTES, 'UTF-8'); ?></span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-center gap-3">
+                                            <div class="avatar avatar-sm avatar-primary">
+                                                <?php echo strtoupper(substr($r['first_name'] ?? 'S', 0, 1)); ?>
+                                            </div>
+                                            <div>
+                                                <span class="font-medium"><?php echo htmlspecialchars($r['family_name'] . ', ' . $r['first_name'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge <?php echo ($r['sex'] ?? '') === 'Male' ? 'badge-info' : 'badge-secondary'; ?>">
+                                            <?php echo htmlspecialchars($r['sex'] ?? 'N/A', ENT_QUOTES, 'UTF-8'); ?>
+                                        </span>
+                                    </td>
+                                    <td><?php echo htmlspecialchars($r['grade_level'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
+                                    <td>
+                                        <span class="badge badge-success">Enrolled</span>
+                                    </td>
+                                    <td>
+                                        <div class="table-actions">
+                                            <button onclick="viewStudent(<?php echo (int)$r['id']; ?>, '<?php echo htmlspecialchars($r['family_name'] . ', ' . $r['first_name'], ENT_QUOTES, 'UTF-8'); ?>', '<?php echo htmlspecialchars($r['lrn'] ?? '', ENT_QUOTES, 'UTF-8'); ?>')" class="btn btn-sm btn-secondary">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                    <circle cx="12" cy="12" r="3"></circle>
+                                                </svg>
+                                                View
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <?php if($total > 0): ?>
+                <div class="card-footer">
+                    <div class="d-flex justify-between align-center flex-wrap gap-3">
+                        <p class="text-sm text-muted mb-0">
+                            Showing <?php echo (($page - 1) * $limit) + 1; ?> to <?php echo min($page * $limit, $total); ?> of <?php echo $total; ?> students
+                        </p>
+                        <div class="pagination">
+                            <button onclick="goToPage(<?php echo $page - 1; ?>)" class="pagination-item <?php echo $page <= 1 ? 'disabled' : ''; ?>" <?php echo $page <= 1 ? 'disabled' : ''; ?>>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="15 18 9 12 15 6"></polyline>
+                                </svg>
+                            </button>
+                            <?php for($i = max(1, $page - 2); $i <= min($totalPages, $page + 2); $i++): ?>
+                            <button onclick="goToPage(<?php echo $i; ?>)" class="pagination-item <?php echo $i === $page ? 'active' : ''; ?>"><?php echo $i; ?></button>
+                            <?php endfor; ?>
+                            <button onclick="goToPage(<?php echo $page + 1; ?>)" class="pagination-item <?php echo $page >= $totalPages ? 'disabled' : ''; ?>" <?php echo $page >= $totalPages ? 'disabled' : ''; ?>>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="9 18 15 12 9 6"></polyline>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+            </div>
+        </main>
     </div>
-    <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
-        <button onclick="exportAttendance()">Export Attendance CSV</button>
-        <button onclick="exportGrades()">Export Grades CSV</button>
-        <label style="margin-left:auto;">Quick Filter</label>
-        <select id="quick_filter" onchange="applyFilter()"><option value="all">All</option><option value="present">Present</option><option value="absent">Absent</option><option value="tardy">Tardy</option><option value="unmarked">Unmarked</option></select>
-    </div>
-    <?php if($selected){
-        $p=0;$a=0;$t=0; $total = count($enrolled);
-        foreach($enrolled as $e){ $sid = (int)$e['id']; $st = $attendanceMap[$sid] ?? null; if($st==='present') $p++; elseif($st==='absent') $a++; elseif($st==='tardy') $t++; }
-        $pct = $total>0 ? round(($p/$total)*100) : 0;
-        $un = $total - ($p+$a+$t);
-        echo '<div style="margin-top:8px;padding:8px;border:1px solid #ddd;background:#F9F9F9;">Present: '.(int)$p.'/'.(int)$total.' ('.$pct.'%) | Absent: '.(int)$a.'/'.(int)$total.' | Tardy: '.(int)$t.'/'.(int)$total.' | Unmarked: '.(int)$un.'</div>';
-    } ?>
-    <table>
-        <tr>
-            <th onclick="setSort('lrn')">LRN</th>
-            <th onclick="setSort('family_name')">Name</th>
-            <th onclick="setSort('grade_level')">Grade</th>
-            <th>Grade</th>
-            <th>Attendance</th>
-            <th>Actions</th>
-        </tr>
-        <?php if(!$rows){ ?>
-            <tr><td colspan="4" align="center">No Records Found...</td></tr>
-        <?php } else { foreach($rows as $r){ $eid = $selected && isset($enMap[$r['id']]) ? (int)$enMap[$r['id']] : 0; $rowSt = $attendanceMap[(int)$r['id']] ?? 'unmarked'; ?>
-            <tr id="row_<?php echo (int)$r['id']; ?>" data-row="1" data-status="<?php echo htmlspecialchars($rowSt,ENT_QUOTES,'UTF-8'); ?>">
-                <td><?php echo htmlspecialchars($r['lrn'],ENT_QUOTES,'UTF-8'); ?></td>
-                <td><?php echo htmlspecialchars($r['family_name'].', '.$r['first_name'],ENT_QUOTES,'UTF-8'); ?></td>
-                <td><?php echo htmlspecialchars($r['grade_level'],ENT_QUOTES,'UTF-8'); ?></td>
-                <td><?php if($eid){ $cur = isset($gradeMap[$eid])? htmlspecialchars($gradeMap[$eid],ENT_QUOTES,'UTF-8') : '-'; echo $cur.' '; ?><button onclick="saveGrade(<?php echo $eid; ?>)">Save</button><?php } else { echo '-'; } ?></td>
-                <td><?php if($selected){ $curSt = $attendanceMap[(int)$r['id']] ?? ''; ?>
-                    <select id="att_<?php echo (int)$r['id']; ?>">
-                        <option <?php echo $curSt==='present'?'selected':''; ?>>present</option>
-                        <option <?php echo $curSt==='absent'?'selected':''; ?>>absent</option>
-                        <option <?php echo $curSt==='tardy'?'selected':''; ?>>tardy</option>
-                    </select>
-                    <button onclick="saveAttendanceNew(<?php echo (int)$r['id']; ?>)">Save</button>
-                <?php } else { echo '-'; } ?></td>
-                <td>
-                    <button onclick="openModal('Student', '<?php echo htmlspecialchars($r['family_name'].', '.$r['first_name'].' | LRN: '.$r['lrn'],ENT_QUOTES,'UTF-8'); ?>')">View</button>
-                    <a href="grades.php" style="margin-left:6px;">Grades</a>
-                    <a href="attendance.php" style="margin-left:6px;">Attendance</a>
-                </td>
-            </tr>
-        <?php }} ?>
-    </table>
-    <div class="pager">
-        <button onclick="prev()">Prev</button>
-        <span>Page <?php echo (int)$page; ?> of <?php echo max(1, ceil($total/$limit)); ?></span>
-        <button onclick="next()">Next</button>
-    </div>
-    <p><a href="teacher_dashboard.php">Back</a></p>
-    <script>
-        function exportAttendance(){ const lid = document.getElementById('load').value; const d = document.getElementById('date').value; if(lid==='0'||!d){ alert('Select load and date'); return; } window.location.href='advisory_attendance_export.php?load_id='+lid+'&date='+encodeURIComponent(d); }
-        function exportGrades(){ const lid = document.getElementById('load').value; if(lid==='0'){ alert('Select load'); return; } window.location.href='advisory_grades_export.php?load_id='+lid; }
-        function applyFilter(){ const f = document.getElementById('quick_filter').value; const rows = document.querySelectorAll('table tr[data-row="1"]'); rows.forEach(r=>{ r.style.background=''; const st = r.dataset.status||'unmarked'; if(f==='all') return; if(st===f){ r.style.background = f==='present'? '#DFF0D8' : (f==='absent'? '#F2DEDE' : (f==='tardy'? '#FCF8E3' : '')); } }); }
-        function saveAttendanceNew(sid){ const d = document.getElementById('date').value; const lid = document.getElementById('load').value; const st = document.getElementById('att_'+sid).value; fetch('saveAttendance.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'student_id='+sid+'&subject_load_id='+lid+'&date='+encodeURIComponent(d)+'&status='+encodeURIComponent(st)}).then(r=>r.json()).then(j=>{ if(j.success){ const tr = document.getElementById('row_'+sid); if(tr){ tr.dataset.status = st; } applyFilter(); alert('Saved'); } else { alert('Failed'); } }); }
-    </script>
 </div>
-<div id="modal" class="modal"><div class="box"><h4 id="m_title"></h4><p id="m_body"></p><div style="text-align:right;margin-top:10px;"><button onclick="closeModal()">Close</button></div></div></div>
-</body>
-</html>
+
+<div class="modal-backdrop" id="modalBackdrop" onclick="closeModal()"></div>
+<div class="modal" id="studentModal">
+    <div class="modal-header">
+        <h5 class="modal-title" id="modalTitle">Student Details</h5>
+        <button class="modal-close" onclick="closeModal()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </button>
+    </div>
+    <div class="modal-body">
+        <p id="modalBody"></p>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+    </div>
+</div>
+
+<style>
+.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+.sortable:hover {
+    background-color: var(--color-gray-100);
+}
+.sort-icon {
+    opacity: 0.5;
+    margin-left: var(--spacing-1);
+    vertical-align: middle;
+}
+.d-flex { display: flex; }
+.justify-between { justify-content: space-between; }
+.align-center { align-items: center; }
+.flex-wrap { flex-wrap: wrap; }
+.gap-4 { gap: var(--spacing-4); }
+.gap-3 { gap: var(--spacing-3); }
+.p-6 { padding: var(--spacing-6); }
+.p-0 { padding: 0; }
+.mb-3 { margin-bottom: var(--spacing-3); }
+.mb-0 { margin-bottom: 0; }
+.text-center { text-align: center; }
+.text-muted { color: var(--color-text-muted); }
+.text-sm { font-size: var(--font-size-sm); }
+.font-medium { font-weight: var(--font-weight-medium); }
+.empty-state-inline {
+    padding: var(--spacing-8);
+}
+@media print {
+    .sidebar, .top-header, .page-header-actions, .search-filter-bar, .pagination, .table-actions, .card-footer {
+        display: none !important;
+    }
+    .main-wrapper {
+        margin-left: 0 !important;
+    }
+    .card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+}
+</style>
+
+<script>
+let currentPage = <?php echo (int)$page; ?>;
+let currentLimit = <?php echo (int)$limit; ?>;
+let currentQ = "<?php echo htmlspecialchars($q, ENT_QUOTES, 'UTF-8'); ?>";
+let currentSort = "<?php echo htmlspecialchars($sort, ENT_QUOTES, 'UTF-8'); ?>";
+let currentDir = "<?php echo htmlspecialchars($dir, ENT_QUOTES, 'UTF-8'); ?>";
+
+let searchTimeout;
+function handleSearch(value) {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        currentQ = value.trim();
+        currentPage = 1;
+        reload();
+    }, 300);
+}
+
+function setSort(col) {
+    if (currentSort === col) {
+        currentDir = currentDir === 'ASC' ? 'DESC' : 'ASC';
+    } else {
+        currentSort = col;
+        currentDir = 'ASC';
+    }
+    reload();
+}
+
+function goToPage(p) {
+    if (p < 1) return;
+    currentPage = p;
+    reload();
+}
+
+function reload() {
+    const params = new URLSearchParams();
+    params.set('q', currentQ);
+    params.set('sort', currentSort);
+    params.set('dir', currentDir);
+    params.set('page', currentPage);
+    params.set('limit', currentLimit);
+    window.location.href = 'advisory_class.php?' + params.toString();
+}
+
+function viewStudent(id, name, lrn) {
+    document.getElementById('modalTitle').textContent = name;
+    document.getElementById('modalBody').textContent = 'LRN: ' + lrn;
+    document.getElementById('modalBackdrop').classList.add('active');
+    document.getElementById('studentModal').classList.add('active');
+}
+
+function closeModal() {
+    document.getElementById('modalBackdrop').classList.remove('active');
+    document.getElementById('studentModal').classList.remove('active');
+}
+
+function exportToPDF() {
+    window.print();
+}
+</script>
+
+<?php include "includes/footer.php"; ?>

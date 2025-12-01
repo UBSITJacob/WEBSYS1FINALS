@@ -2,54 +2,207 @@
 include "session.php";
 require_login();
 if($_SESSION['role']!=='admin'){ header('Location: index.php'); exit; }
+
+$page_title = 'Students';
+$breadcrumb = [
+    ['title' => 'Students', 'active' => true]
+];
 ?>
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Manage Students</title>
-    <style>
-        body{font-family: Arial, sans-serif;}
-        .container{max-width:1100px;margin:20px auto;}
-        input,select{padding:8px;width:100%;}
-        table{width:100%;border-collapse:collapse;margin-top:10px;}
-        th,td{border:1px solid #ddd;padding:8px;}
-        tr:hover{background:#F0F0F0;cursor:pointer;}
-    </style>
-    <script>
-        let page=1,limit=10,q="",sort='grade_level',dir='ASC',pendingId=0,confirmCb=null;
-        function loadStudents(){
-            fetch('getStudents.php?q='+encodeURIComponent(q)+'&page='+page+'&limit='+limit+'&sort='+encodeURIComponent(sort)+'&dir='+encodeURIComponent(dir))
-                .then(r=>r.text()).then(html=>{document.getElementById('list').innerHTML=html});
-        }
-        function searchInput(v){ q=v.trim(); page=1; loadStudents(); }
-        function setSort(s){ dir = (sort===s && dir==='ASC')? 'DESC':'ASC'; sort=s; loadStudents(); }
-        function viewStudent(id){ window.location.href='student_view.php?id='+id; }
-        function updateStudent(id){ window.location.href='student_update.php?id='+id; }
-        function openModal(title, body, cb){ document.getElementById('m_title').innerText=title; document.getElementById('m_body').innerText=body; confirmCb=cb; document.getElementById('modal').style.display='flex'; }
-        function closeModal(){ document.getElementById('modal').style.display='none'; confirmCb=null; }
-        function confirmModal(){ if(confirmCb) confirmCb(); }
-        function deleteStudent(id){ openModal('Delete Student','Are you sure?', function(){ fetch('deleteStudent.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'id='+id}).then(r=>r.json()).then(j=>{ closeModal(); if(j.success){ loadStudents(); } else { alert('Failed'); } }); }); }
-        function createAccount(id){ openModal('Create Account','Create school account for this student?', function(){ fetch('createStudentAccount.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'id='+id}).then(r=>r.json()).then(j=>{ closeModal(); alert(j.success? 'Account created':'Failed'); }); }); }
-        function editAccount(id){ const u = prompt('Username:'); if(u===null) return; fetch('editStudentAccount.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'id='+id+'&username='+encodeURIComponent(u)}).then(r=>r.json()).then(j=>{ alert(j.success? 'Updated':'Failed'); }); }
-        window.onload = loadStudents;
-    </script>
-</head>
-<body>
-<div class="container">
-    <h3>Manage Students</h3>
-    <p><a href="students_add.php">Add Student (manual)</a></p>
-    <input type="text" placeholder="Search name or LRN" oninput="searchInput(this.value)">
-    <div id="list"></div>
-    <div id="modal" class="modal" style="position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;">
-        <div class="box" style="background:#fff;padding:16px;border-radius:8px;max-width:420px;width:90%;">
-            <h4 id="m_title"></h4>
-            <p id="m_body"></p>
-            <div style="text-align:right;margin-top:10px;"><button onclick="closeModal()">Cancel</button> <button onclick="confirmModal()">Confirm</button></div>
+<?php include "includes/header.php"; ?>
+<div class="app-layout">
+    <?php include "includes/sidebar.php"; ?>
+    
+    <div class="main-wrapper">
+        <?php include "includes/topbar.php"; ?>
+        
+        <main class="main-content">
+            <div class="page-header">
+                <div class="page-header-row">
+                    <div>
+                        <h1 class="page-header-title">Students</h1>
+                        <p class="page-header-subtitle">Manage student records and accounts</p>
+                    </div>
+                    <div class="page-header-actions">
+                        <a href="students_add.php" class="btn btn-primary">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Add Student
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Student List</h3>
+                </div>
+                <div class="card-body">
+                    <div class="search-filter-bar">
+                        <div class="search-input-wrapper">
+                            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.35-4.35"></path>
+                            </svg>
+                            <input type="text" class="form-control" placeholder="Search by name or LRN..." id="searchInput" oninput="searchInput(this.value)">
+                        </div>
+                        <select class="form-control filter-dropdown" id="gradeFilter" onchange="filterGrade(this.value)">
+                            <option value="">All Grades</option>
+                            <option value="Grade 7">Grade 7</option>
+                            <option value="Grade 8">Grade 8</option>
+                            <option value="Grade 9">Grade 9</option>
+                            <option value="Grade 10">Grade 10</option>
+                            <option value="Grade 11">Grade 11</option>
+                            <option value="Grade 12">Grade 12</option>
+                        </select>
+                        <select class="form-control filter-dropdown" id="deptFilter" onchange="filterDept(this.value)">
+                            <option value="">All Departments</option>
+                            <option value="JHS">Junior High School</option>
+                            <option value="SHS">Senior High School</option>
+                        </select>
+                    </div>
+                    
+                    <div class="table-container">
+                        <div id="list"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop"></div>
+<div class="modal" id="confirmModal">
+    <div class="modal-header">
+        <h4 class="modal-title" id="m_title">Confirm Action</h4>
+        <button class="modal-close" onclick="closeModal()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </button>
+    </div>
+    <div class="modal-body">
+        <p id="m_body"></p>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" id="confirmBtn" onclick="confirmModal()">Confirm</button>
+    </div>
+</div>
+
+<div class="modal-backdrop" id="accountBackdrop"></div>
+<div class="modal" id="accountModal">
+    <div class="modal-header">
+        <h4 class="modal-title" id="accountTitle">Edit Account</h4>
+        <button class="modal-close" onclick="closeAccountModal()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </button>
+    </div>
+    <div class="modal-body">
+        <div class="form-group">
+            <label class="form-label">Username</label>
+            <input type="text" class="form-control" id="accountUsername" placeholder="Enter username">
         </div>
     </div>
-    <p><a href="admin_dashboard.php">Back</a></p>
+    <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeAccountModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveAccount()">Save</button>
+    </div>
 </div>
-</body>
-</html>
+
+<script>
+    let page = 1, limit = 10, q = "", sort = 'grade_level', dir = 'ASC', grade = '', dept = '', pendingId = 0, confirmCb = null;
+    
+    function loadStudents() {
+        let url = 'getStudents.php?q=' + encodeURIComponent(q) + '&page=' + page + '&limit=' + limit + '&sort=' + encodeURIComponent(sort) + '&dir=' + encodeURIComponent(dir);
+        if(grade) url += '&grade=' + encodeURIComponent(grade);
+        if(dept) url += '&dept=' + encodeURIComponent(dept);
+        fetch(url)
+            .then(r => r.text())
+            .then(html => { document.getElementById('list').innerHTML = html; });
+    }
+    
+    function searchInput(v) { q = v.trim(); page = 1; loadStudents(); }
+    function filterGrade(v) { grade = v; page = 1; loadStudents(); }
+    function filterDept(v) { dept = v; page = 1; loadStudents(); }
+    function setSort(s) { dir = (sort === s && dir === 'ASC') ? 'DESC' : 'ASC'; sort = s; loadStudents(); }
+    
+    function viewStudent(id) { window.location.href = 'student_view.php?id=' + id; }
+    function updateStudent(id) { window.location.href = 'student_update.php?id=' + id; }
+    
+    function openModal(title, body, cb, btnClass) {
+        document.getElementById('m_title').innerText = title;
+        document.getElementById('m_body').innerText = body;
+        confirmCb = cb;
+        const btn = document.getElementById('confirmBtn');
+        btn.className = 'btn ' + (btnClass || 'btn-primary');
+        document.getElementById('modalBackdrop').classList.add('active');
+        document.getElementById('confirmModal').classList.add('active');
+    }
+    
+    function closeModal() {
+        document.getElementById('modalBackdrop').classList.remove('active');
+        document.getElementById('confirmModal').classList.remove('active');
+        confirmCb = null;
+    }
+    
+    function confirmModal() { if(confirmCb) confirmCb(); }
+    
+    function deleteStudent(id) {
+        openModal('Delete Student', 'Are you sure you want to delete this student? This action cannot be undone.', function() {
+            fetch('deleteStudent.php', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'id=' + id })
+                .then(r => r.json())
+                .then(j => { 
+                    closeModal(); 
+                    if(j.success) { loadStudents(); } else { alert('Failed to delete student'); } 
+                });
+        }, 'btn-danger');
+    }
+    
+    function createAccount(id) {
+        openModal('Create Account', 'Create a school account for this student? They will receive login credentials.', function() {
+            fetch('createStudentAccount.php', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'id=' + id })
+                .then(r => r.json())
+                .then(j => { 
+                    closeModal(); 
+                    alert(j.success ? 'Account created successfully' : (j.message || 'Failed to create account')); 
+                    if(j.success) loadStudents();
+                });
+        }, 'btn-success');
+    }
+    
+    function editAccount(id) {
+        pendingId = id;
+        document.getElementById('accountUsername').value = '';
+        document.getElementById('accountBackdrop').classList.add('active');
+        document.getElementById('accountModal').classList.add('active');
+    }
+    
+    function closeAccountModal() {
+        document.getElementById('accountBackdrop').classList.remove('active');
+        document.getElementById('accountModal').classList.remove('active');
+        pendingId = 0;
+    }
+    
+    function saveAccount() {
+        const username = document.getElementById('accountUsername').value.trim();
+        if(!username) { alert('Please enter a username'); return; }
+        fetch('editStudentAccount.php', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'id=' + pendingId + '&username=' + encodeURIComponent(username) })
+            .then(r => r.json())
+            .then(j => { 
+                closeAccountModal();
+                alert(j.success ? 'Account updated successfully' : 'Failed to update account'); 
+            });
+    }
+    
+    document.getElementById('modalBackdrop').addEventListener('click', closeModal);
+    document.getElementById('accountBackdrop').addEventListener('click', closeAccountModal);
+    
+    window.onload = loadStudents;
+</script>
+<?php include "includes/footer.php"; ?>
