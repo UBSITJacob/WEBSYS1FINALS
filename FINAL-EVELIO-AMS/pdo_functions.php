@@ -1,6 +1,7 @@
 <?php
 class pdoCRUD{
     private $pdo;
+    private $connected = false;
 
     function __construct(){
         $host = "localhost";
@@ -9,11 +10,22 @@ class pdoCRUD{
         $dbname = "evelio_ams_db";
         $charset = "utf8mb4";
         $dsn = "mysql:host=$host;dbname=$dbname;charset=$charset";
-        $this->pdo = new PDO($dsn,$user,$pass,[
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false
-        ]);
+        
+        try {
+            $this->pdo = new PDO($dsn,$user,$pass,[
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false
+            ]);
+            $this->connected = true;
+        } catch(PDOException $e) {
+            $this->connected = false;
+            $this->pdo = null;
+        }
+    }
+    
+    public function isConnected(){
+        return $this->connected && $this->pdo !== null;
     }
 
     public function login($email,$password){

@@ -11,7 +11,7 @@ $pdo = null;
 try {
     include "pdo_functions.php";
     $pdoC = new pdoCRUD();
-    $db_available = true;
+    $db_available = $pdoC->isConnected();
 } catch(Exception $e) {
     $db_available = false;
 }
