@@ -1,0 +1,293 @@
+Create a design that is:
+
+Premium, modern, and professional
+
+Very clean and elegant
+
+School-friendly
+
+Soft, neutral colors (NOT colorful, bright, or distracting)
+
+Minimalistic but premium
+
+Uses consistent spacing and typography
+
+100% responsive for mobile, tablet, and desktop
+
+Not AI-looking — make it look handcrafted
+
+Color palette should be calm and professional:
+
+Soft shades of navy, gray, white, very light blue, or charcoal
+
+Subtle gradients only
+
+Avoid bright or neon colors
+
+Typography:
+
+Use a clean sans-serif family (e.g., Inter, Poppins, Roboto)
+
+Title: medium weight
+
+Body text: regular
+
+Headings must be readable and well-spaced
+
+🧭 LAYOUT REQUIREMENTS
+Sidebar Navigation (for all roles)
+
+Collapsible left sidebar
+
+Smooth hide/show animation
+
+Clean icons
+
+Fixed position
+
+Responsive mobile drawer layout
+
+Top Navigation Bar
+
+Logo on left
+
+User profile dropdown on right
+
+Notifications icon (optional)
+
+Clean and simple
+
+Page Structure
+
+Consistent spacing
+
+Cards with soft shadows
+
+Clean table design
+
+Sticky table headers
+
+Pagination and search bars
+
+All forms must use clean input fields with proper spacing
+
+Buttons: rounded corners, modern, minimal colors
+
+📱 RESPONSIVENESS REQUIREMENTS
+
+Mobile sidebar becomes sliding drawer
+
+Tables convert into stacked card views
+
+Forms become single-column
+
+No overflow issues
+
+Dashboard widgets auto-stack
+
+🖥️ PAGES TO DESIGN
+
+You must design UI for all pages of the system for three roles:
+Admin, Teacher, Student.
+
+1. LOGIN PAGE
+
+Email, password
+
+“Apply as New Student” button
+
+Clean layout with school branding
+
+Professional illustrations or minimal shape background
+
+2. APPLY AS NEW STUDENT (FRONTEND FORM ONLY)
+
+Design the entire registration workflow including:
+
+Consent Agreement modal/page
+
+Multi-step form with sections:
+
+Department Selection
+
+Junior High/Senior High form logic
+
+Personal Information
+
+Contact Info
+
+Address
+
+Educational Background
+
+Academic Info (LRN)
+
+Guardian Information
+
+Parent Information
+
+Design should include:
+
+Smooth transitions between form steps
+
+Progress indicator
+
+Auto-fill "Same as Current Address" checkbox
+
+Validation UI
+
+👑 SUPER ADMIN DESIGN PAGES
+Dashboard
+
+Widgets/cards for:
+
+Total Students
+
+Total Teachers
+
+Total Sections
+
+Total Applicants
+
+Enrollment Summary
+
+Announcements card
+
+Applicants Page
+
+Search bar
+
+Clean table for listing applicants
+
+View, Approve, Decline buttons
+
+Modal for viewing applicant details
+
+Manage Students
+
+Add Student form (clean fields)
+
+Manage Students table
+
+View / Edit / Delete / Create School Account UI
+
+Create Account modal
+
+Manage Sections
+
+Page for each grade level
+
+Section cards or tables
+
+Manage Teachers
+
+Add Teacher form
+
+Teacher list with action buttons
+
+Assign Advisory Class modal
+
+Assign Subjects modal
+
+Manage Admins
+
+Add Admin form
+
+Admin table with edit/delete
+
+Enrollment Pages
+
+Assign Section UI
+
+Enroll Subjects UI
+
+Manage Enrollment page
+
+👩‍🏫 TEACHER DESIGN PAGES
+Dashboard
+
+Teacher details card
+
+Advisory section overview
+
+Subject loads
+
+Enroll Students UI (same styling as admin but limited actions)
+Manage Grades
+
+Table of grade sheets
+
+Clean grade input layout
+
+Attendance Page
+
+Calendar view
+
+Section dropdown
+
+Subject dropdown
+
+Monthly selector
+
+Advisory Class
+
+Student table
+
+Grades table
+
+Attendance table
+
+Simple filters
+
+🧑‍🎓 STUDENT DESIGN PAGES
+Dashboard
+
+Widgets:
+
+Total Subjects
+
+Section
+
+Grade Level
+
+Adviser
+
+Attendance summary (Present/Absent/Tardy)
+
+Profile
+
+Display all student details in clean grouped sections.
+
+Grades Page
+
+School Year dropdown
+
+Table of subjects and grades
+
+⚙️ SETTINGS PAGE (All Roles)
+
+Profile settings UI must include:
+
+Username
+
+Email (readonly for student + teacher)
+
+Current Password
+
+New Password
+
+Confirm Password
+
+🔍 ADDITIONAL UI REQUIREMENTS
+
+Use AJAX-ready components (search bars, dynamic tables, modals)
+
+Reusable components (cards, buttons, form inputs, tables)
+
+Very clean and modern button designs
+
+Hover effects should be subtle
+
+Mobile-friendly modals and tables
+
+Breadcrumb navigation for inner pages
