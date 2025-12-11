@@ -1,0 +1,523 @@
+AJAX
+
+getSearch.php
+<?php
+	include("includes.php");
+	$oop = new oop_functions();
+
+	$task_name = $_GET['task_name'];
+
+?>
+<style type="text/css">
+	#searchResultArea table tr:hover {
+    background-color: #F0F0F0; /* highlight hovered row only */
+    cursor: pointer;
+}
+</style>
+
+<table>
+	<?php 
+		$fetch = $oop->show_data($task_name);
+		if(mysqli_num_rows($fetch)<1){
+			echo "<center><h1>No Records Found...</h1></center>";
+		}
+		else{
+			while ($row = mysqli_fetch_array($fetch)) {
+	?>
+				<tr onclick="getData('<?php echo htmlspecialchars($row['TaskName'], ENT_QUOTES) ?>')">
+					<td><?php echo $row['TaskName']; ?></td>
+					<td><?php echo $row['TaskDescription']; ?></td>
+					<td><?php echo $row['TaskCreated']; ?></td>
+				</tr>
+	<?php
+			}
+		}
+	?>
+</table>
+
+includes.php
+<?php
+	define("SERVER","localhost");
+	define("USER","root");
+	define("PASS", "");
+	define("DB", "websys1");
+
+	class oop_functions{
+		function __construct(){
+			$connection = mysqli_connect(SERVER,USER,PASS,DB);
+			$this->conn = $connection;
+		}
+
+		public function insert_data($taskname,$description,$dateCreated){
+			$insert = "INSERT INTO tasks(TaskName,TaskDescription,TaskCreated) VALUES('$taskname','$description','$dateCreated')";
+			$result = mysqli_query($this->conn, $insert);
+			return $result;
+
+		}
+
+		public function show_all_data(){
+			$fetch = "SELECT * FROM tasks";
+			$result = mysqli_query($this->conn, $fetch);
+			return $result;
+		}
+
+		public function show_data($taskname){
+			$fetch = "SELECT * FROM tasks WHERE TaskName LIKE '%$taskname%' ";
+			$result = mysqli_query($this->conn, $fetch);
+			return $result;
+		}
+
+		public function multiple_delete($ids){
+			$delete = "DELETE FROM tasks WHERE ID IN ($ids)";
+			$result = mysqli_query($this->conn, $delete);
+			return $result;
+		}
+	}
+
+?>
+
+index.php
+<?php
+	include("includes.php");
+	$oop = new oop_functions();
+
+	if(isset($_POST['submit'])){
+		$taskname = $_POST['taskname'];
+		$description = $_POST['description'];
+		$dateCreated = $_POST['dateCreated'];
+
+		$oop->insert_data($taskname,$description,$dateCreated);
+	}
+
+	if(isset($_POST['delete_selected'])){
+		$selected_ids = $_POST['selected_ids'];
+		$ids = implode(',', $selected_ids);
+
+		$oop->multiple_delete($ids);
+	}
+?>
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title></title>
+</head>
+<body>
+	<a href = "search.php">Search Here</a>
+	<form method="post">
+		<table>
+			<tr>
+				<td>Task Name</td>
+				<td>
+					<input type="text" name="taskname" placeholder="Enter Task Name">
+				</td>
+			</tr>
+			<tr>
+				<td>Task Description</td>
+				<td>
+					<input type="text" name="description" placeholder="Enter Task Description">
+				</td>
+			</tr>
+			<tr>
+				<td>Date Created</td>
+				<td>
+					<input type="datetime-local" name="dateCreated">
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<button name = "submit">Submit</button>
+				</td>
+			</tr>
+		</table>
+	</form>
+
+	<hr>
+
+	<form method="post">
+		<table style="width:800px; margin:auto;">
+			<?php
+				$fetch = $oop->show_all_data();
+
+				if(mysqli_num_rows($fetch)<1){
+					echo "<center><h1>No Records Found...</h1></center>";
+				}
+				else{
+					echo "
+						<tr>
+							<th><button name = 'delete_selected'>Delete Selected</button></th>
+							<th>Task Name</th>
+							<th>Description</th>
+							<th>Date Created</th>
+							<th>Actions</th>
+						</tr>
+					";
+					while($row = mysqli_fetch_array($fetch)){
+			?>
+						<tr>
+							<td align="center"><input type = "checkbox" value="<?php echo $row['ID']; ?>" name = "selected_ids[]"></td>
+							<td><?php echo $row['TaskName']; ?></td>
+							<td><?php echo $row['TaskDescription']; ?></td>
+							<td><?php echo $row['TaskCreated']; ?></td>
+							<td>
+								<a href = "#">Update</a>
+								<a href = "#">Delete</a>
+							</td>
+						</tr>
+			<?php
+					}
+				}
+			?>
+		</table>
+	</form>
+</body>
+</html>
+
+search.php
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title></title>
+	<script type="text/javascript">
+		function showSearchRecord(tname){
+			if(tname.trim == ""){
+				document.getElementById("searchResultArea").innerHTML = "";
+				return;
+			}
+
+			fetch("getSearch.php?task_name="+encodeURIComponent(tname))
+			.then(response => response.text())
+			.then(data => document.getElementById("searchResultArea").innerHTML = data)
+			.catch(() => document.getElementById("searchResultArea").innerHTML = "Error Fetching Data");
+		}
+
+		function getData(tname){
+			document.getElementById("search").value = tname;
+		}
+
+		function enterSearch(event){
+			if(event.key === "Enter"){
+				event.preventDefault();
+				var query = document.getElementById("search").value.trim();
+				if(query !== ""){
+					executeSearch(query);
+				}
+			}
+		}
+
+		function executeSearch(query){
+			window.location.href = "getSearch.php?task_name="+encodeURIComponent(query);
+		}
+	</script>
+
+	<style type="text/css">
+		.container{
+			width: 1200px;
+			margin: auto;
+		}
+		table{
+			margin:auto;
+			width:500px;
+		}
+		table tr td input{
+			padding:10px;
+			width: 95.4%;
+			font-size: 12pt;
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<table>
+			<tr>
+				<td>
+					<input type="text" id = "search" placeholder="Search Task Name Here..." oninput="showSearchRecord(this.value);" onkeydown="enterSearch(event)">
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<div id = "searchResultArea"></div>
+				</td>
+			</tr>
+		</table>
+	</div>
+	
+
+</body>
+</html>
+
+PDO
+dbconfig.php
+<?php
+	$host = "localhost";
+	$user = "root";
+	$pass = "";
+	$charset = "utf8mb4";
+	$dbname = "websys1";
+
+	$dsn = "mysql:host=$host;dbname=$dbname;charset=$charset";
+
+	try{
+		$options = [
+			PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+			PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+			PDO::ATTR_EMULATE_PREPARES => false
+		];
+		$pdo = new PDO($dsn,$user,$pass);
+	}
+	catch(PDOException $e){
+		echo $e->getMessage();
+	}
+?>
+
+delete.php
+<?php
+	include "pdo_functions.php";
+
+	$pdo = new pdoCRUD();
+
+	$id = $_GET['ID'];
+
+	$delete = $pdo->delete_data($id);
+
+	if($delete){
+		echo "
+			<script>
+				alert('Delete Successful.');
+				window.location.href = 'index.php';
+			</script>
+		";
+	}
+?>
+
+index.php
+<?php
+	include "pdo_functions.php";
+
+	$pdo = new pdoCRUD();
+
+	if(isset($_POST['create_task'])){
+		$task_name = $_POST['task_name'];
+		$description = $_POST['description'];
+		$task_created = $_POST['task_created'];
+
+		$pdo->insert_data($task_name,$description,$task_created);
+	}
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title></title>
+</head>
+<body>
+	<form method="post">
+		<table>
+			<tr>
+				<td>Task Name: </td>
+				<td><input type="text" name = "task_name" required></td>
+			</tr>
+			<tr>
+				<td>Description: </td>
+				<td><input type="text" name = "description" required></td>
+			</tr>
+			<tr>
+				<td>Task Created: </td>
+				<td><input type="datetime-local" name = "task_created" required></td>
+			</tr>
+			<tr>
+				<td colspan="2"><button name = "create_task">Create Task</button></td>
+			</tr>
+		</table>
+	</form>
+
+	<table border="1">
+		<?php
+			$fetch = $pdo->show_data();
+
+			if($fetch->rowCount()<1){
+				echo "<center><h1>No Records Found.</h1></center>";
+			}
+			else{
+				echo "
+					<tr>
+						<th>Task Name</th>
+						<th>Description</th>
+						<th>Task Created</th>
+						<th colspan = '2'>Actions</th>
+					</tr>
+				";
+				while($row = $fetch->fetch()){
+		?>
+					<tr>
+						<td><?php echo htmlspecialchars($row['TaskName'], ENT_QUOTES, 'utf-8'); ?></td>
+						<td><?php echo htmlspecialchars($row['TaskDescription'], ENT_QUOTES, 'utf-8'); ?></td>
+						<td><?php echo $row['TaskCreated']; ?></td>
+						<td>
+							<a href = "update.php?ID=<?php echo $row['ID']; ?>">Update</a>
+						</td>
+						<td>
+							<a href = "delete.php?ID=<?php echo $row['ID']; ?>">Delete</a>
+						</td>
+					</tr>
+		<?php
+				}
+			}
+		?>
+	</table>
+</body>
+</html>
+
+pdo_functions.php
+<?php
+
+class pdoCRUD{
+	private $pdo;
+
+	function __construct(){
+		$host = "localhost";
+		$user = "root";
+		$pass = "";
+		$dbname = "websys1";
+		$charset = "utf8mb4";
+
+		try{
+			$dsn = "mysql:host=$host;dbname=$dbname;charset=$charset";
+
+			$connection = new PDO($dsn, $user, $pass);
+			$this->pdo = $connection;
+		}
+		catch(PDOException $e){
+			die("connection failed" . $e->getMessage());
+		}		
+	}
+
+	public function show_data(){
+		$fetch = $this->pdo->prepare("SELECT * FROM tasks");
+		$fetch->execute();
+		return $fetch;
+	}
+
+	public function insert_data($task_name, $description, $task_created){
+		$insert = $this->pdo->prepare("INSERT INTO tasks(TaskName,TaskDescription,TaskCreated) VALUES(:task_name, :description, :task_created)");
+		$insert->execute([
+			':task_name' => $task_name,
+			':description' => $description,
+			':task_created' => $task_created
+		]);
+		return $insert;
+	}
+
+	public function delete_data($id){
+		$delete = $this->pdo->prepare("DELETE FROM tasks WHERE ID = :id ");
+		$delete->execute([
+			':id' => $id
+		]);
+		return $delete;
+	}
+
+	public function show_selected_data($id){
+		$fetch = $this->pdo->prepare("SELECT * FROM tasks WHERE ID = :id ");
+		$fetch->execute([
+			':id' => $id
+		]);
+		return $fetch;
+	}
+
+	public function update_data($data_id, $task_name, $description, $task_created){
+		$update = $this->pdo->prepare("UPDATE tasks 
+			SET TaskName = :task_name, 
+				TaskDescription = :description, 
+				TaskCreated = :task_created 
+			WHERE ID = :data_id");
+		$update->execute([
+			':data_id' => $data_id,
+			':task_name'=> $task_name,
+			':description' =>$description,
+			':task_created'=> $task_created
+		]);
+		return $update;
+	}
+}
+
+?>
+
+update.php
+<?php
+	include "pdo_functions.php";
+
+	$pdo = new pdoCRUD();
+
+	$id = $_GET['ID'];
+
+	if(isset($_POST['update'])){
+		$data_id = $_POST['data_id'];
+		$task_name = $_POST['task_name'];
+		$description = $_POST['description'];
+		$task_created = $_POST['task_created'];
+
+		$update = $pdo->update_data($data_id, $task_name, $description, $task_created);
+
+		if($update){
+			echo "
+				<script>
+					alert('Update Task Successfully. ');
+					window.location.href = 'index.php';
+				</script>
+			";
+		}
+	}
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title></title>
+</head>
+<body>
+	<form method ="post">
+		<table>
+			<?php
+				$fetch=$pdo->show_selected_data($id);
+
+				while($row = $fetch->fetch()){
+			?>
+					<tr>
+						<td>Task Name</td>
+						<td>
+							<input type="text" name="task_name" value = "<?php echo $row['TaskName']; ?>" required>
+						</td>
+					</tr>
+					<tr>
+						<td>Description</td>
+						<td>
+							<input type="text" name="description" value = "<?php echo $row['TaskDescription']; ?>" required>
+						</td>
+					</tr>
+					<tr>
+						<td>Task Created</td>
+						<td>
+							<input type="datetime-local" name="task_created" value = "<?php echo $row['TaskCreated']; ?>" required>
+						</td>
+					</tr>
+					<tr>
+						<td colspan="2">
+							<button name = "update">Update Task</button>
+						</td>
+					</tr>
+
+					<input type="hidden" name = "data_id" value = "<?php echo $row['ID']; ?>">
+			<?php
+				}
+			?>
+		</table>
+	</form>
+</body>
+</html>
